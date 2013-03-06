@@ -60,6 +60,7 @@ function doRoundTrip() {
   var compressionRatio = inputLength / outputLength;
 
   var intermediate = {
+    compressorKeyValueLRU: compressorKeyValueLRU,
     instructions: instructions,
     inputLength: inputLength,
     outputLength: outputLength,
@@ -74,12 +75,13 @@ function doRoundTrip() {
     deserializeInstructions(serializedInstructions);
 
   var intermediate2 = {
+    decompressorKeyValueLRU: decompressorKeyValueLRU,
     deserializedInstructions: deserializedInstructions,
   };
-  intermediate2Textarea.textContent = JSON.stringify(intermediate2, null, '  ');
-
   var deserializedHeaderList =
     instructionsToHeaderList(decompressorKeyValueLRU, deserializedInstructions);
+
+  intermediate2Textarea.textContent = JSON.stringify(intermediate2, null, '  ');
   uncompressed2Textarea.textContent =
     JSON.stringify(deserializedHeaderList, null, '  ');
 }

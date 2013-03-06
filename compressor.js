@@ -96,9 +96,14 @@ function KeyValueLRU() {
 // TODO(akalin): Implement a finite LRU.
 
 KeyValueLRU.prototype.store = function(kv) {
+  var existingIndex = this.findEntryIndex(kv);
+  if (existingIndex && existingIndex.matchesValue) return;
+
   var i = this.kvs_.length;
   this.kvs_.push(kv);
-  this.indices_[kv.key][kv.val] = i;
+  var key = kv.key;
+  this.indices_[key] = this.indices_[key] || {};
+  this.indices_[key][kv.val] = i;
 };
 
 KeyValueLRU.prototype.entryAtIndex = function(i) {
@@ -108,23 +113,24 @@ KeyValueLRU.prototype.entryAtIndex = function(i) {
 };
 
 KeyValueLRU.prototype.findEntryIndex = function(kv) {
-  var result = findStaticEntryIndex(kv);
-  if (result) return result;
+  var staticResult = findStaticEntryIndex(kv);
+  if (staticResult && staticResult.matchesValue) return staticResult;
+
   var keyIndex = this.indices_[kv.key];
-  if (!keyIndex) return null;
-  var valIndex = keyIndex[kv.val];
+  if (!keyIndex) return staticResult;
   var result = {};
-  if (valIndex) {
-    result.index = valIndex;
+  if (kv.val in keyIndex) {
+    result.index = keyIndex[kv.val];
+    result.matchesValue = true;
   } else {
-    for (v in keyIndex) {
+    for (var v in keyIndex) {
       result.index = keyIndex[v];
       break;
     }
-    result.matchesValue = true;
   }
   result.index += this.firstEntryIndex_;
-  return result;
+
+  return (result && result.matchesValue) ? result : staticResult;
 };
 
 function headerListToInstructions(keyValueLRU, headerList) {
@@ -146,11 +152,17 @@ function headerListToInstructions(keyValueLRU, headerList) {
     }
   }
 
-  return {
+  var instructions = {
     skvsto: skvstos,
     stoggl: stoggls,
     sclone: sclones
   };
+
+  instructionsToHeaderList(
+    keyValueLRU,
+    deserializeInstructions(serializeInstructions(instructions)));
+
+  return instructions;
 }
 
 function Serializer() {
@@ -301,11 +313,14 @@ function instructionsToHeaderList(keyValueLRU, instructions) {
 
   var stoggls = {};
 
+  var storeLater = [];
+
   for (var i = 0; i < instructions.length; ++i) {
     var instruction = instructions[i];
     if (instruction.op == 'skvsto') {
       var kvs = instruction.kvs;
       Array.prototype.push.apply(headerList, kvs);
+      Array.prototype.push.apply(storeLater, kvs);
     } else if (instruction.op == 'stoggl') {
       var is = instruction.is;
       for (var j = 0; j < is.length; ++j) {
@@ -323,7 +338,9 @@ function instructionsToHeaderList(keyValueLRU, instructions) {
         var kv = keyValueLRU.entryAtIndex(keyIndex);
         if (!kv) throw new Error('Could not find LRU entry for ' + keyIndex);
         var key = kv.key;
-        headerList.push({ key: key, val: kivs[j].val });
+        var kv = { key: key, val: kivs[j].val };
+        headerList.push(kv);
+        storeLater.push(kv);
       }
     }
   }
@@ -332,6 +349,10 @@ function instructionsToHeaderList(keyValueLRU, instructions) {
     var kv = keyValueLRU.entryAtIndex(i);
     if (!kv) throw new Error('Could not find LRU entry for ' + i);
     headerList.push(kv);
+  }
+
+  for (var i = 0; i < storeLater.length; ++i) {
+    keyValueLRU.store(storeLater[i]);
   }
 
   return headerList;
