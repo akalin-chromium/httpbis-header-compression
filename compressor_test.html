@@ -50,7 +50,7 @@ var decompressorHeaderGroups = [{}];
 var decompressorKeyValueLRU = new KeyValueLRU();
 
 function doRoundTrip() {
-  var input = uncompressedTextarea.textContent;
+  var input = uncompressedTextarea.value;
   var headerList = JSON.parse(input);
   var instructions =
     headerListToInstructions(compressorHeaderGroups, compressorKeyValueLRU,
