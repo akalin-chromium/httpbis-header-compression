@@ -78,7 +78,7 @@ function findStaticEntryIndex(kv) {
   if (kv.key in STATIC_ENTRY_INDICES) {
     var i = STATIC_ENTRY_INDICES[kv.key];
     var result = { index: i };
-    if (STATIC_ENTRIES[i] == kv.val) {
+    if (STATIC_ENTRIES[i][1] == kv.val) {
       result.matchesValue = true;
     }
     return result;
