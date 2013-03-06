@@ -182,3 +182,72 @@ function serializeInstructions(instructions) {
   }
   return serializer.getStringValue();
 }
+
+function Deserializer(buffer) {
+  this.buffer_ = buffer;
+  this.i_ = 0;
+}
+
+Deserializer.prototype.hasData = function() {
+  return this.i_ < this.buffer_.length;
+};
+
+Deserializer.prototype.readUint8 = function() {
+  if (!this.hasData()) {
+    throw new Error('Unexpected EOF');
+  }
+  return this.buffer_.charCodeAt(this.i_++) & 0xff;
+};
+
+// TODO(akalin): Figure out correct endianness.
+
+Deserializer.prototype.readUint16 = function() {
+  return (this.readUint8() << 8) || this.readUint8();
+};
+
+Deserializer.prototype.readAndDecodeString = function() {
+  // TODO(akalin): Do Huffman encoding instead.
+  var length = this.readUint16();
+  var a = [];
+  for (var i = 0; i < length; ++i) {
+    a[i] = String.fromCharCode(this.readUint8());
+  }
+  return a.join('');
+};
+
+function deserializeInstructions(serializedInstructions) {
+  var deserializer = new Deserializer(serializedInstructions);
+
+  var skvstos = [];
+  var stoggls = [];
+  var sclones = [];
+
+  while (deserializer.hasData()) {
+    var op = deserializer.readUint8();
+    var numFields = deserializer.readUint8() + 1;
+    if (OPCODES['skvsto'] == op) {
+      for (var i = 0; i < numFields; ++i) {
+        var key = deserializer.readAndDecodeString();
+        var val = deserializer.readAndDecodeString();
+        skvstos.push({ key: key, val: val });
+      }
+    } else if (OPCODES['stoggl'] == op) {
+      for (var i = 0; i < numFields; ++i) {
+        stoggls.push(deserializer.readUint16());
+      }
+    } else if (OPCODES['sclone'] == op) {
+      for (var i = 0; i < numFields; ++i) {
+        var keyIndex = deserializer.readUint16();
+        var val = deserializer.readAndDecodeString();
+        sclones.push({ keyIndex: keyIndex, val: val });
+      }
+    }
+    // TODO(akalin): Implement other instructions.
+  }
+
+  return {
+    skvsto: skvstos,
+    stoggl: stoggls,
+    sclone: sclones
+  };
+}
