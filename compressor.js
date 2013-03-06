@@ -133,6 +133,31 @@ KeyValueLRU.prototype.findEntryIndex = function(kv) {
   return (result && result.matchesValue) ? result : staticResult;
 };
 
+function extractRanges(s) {
+  var l = Object.keys(s).map(function(str) { return parseInt(str, 10); });
+  l.sort();
+  var ranges = [];
+
+  function processRange(i) {
+    var rangeEnd = l[i];
+    if (rangeEnd >= rangeStart + 3) {
+      ranges.push([rangeStart, rangeEnd]);
+      for (var j = rangeStart; j <= rangeEnd; ++j) {
+        delete s[j];
+      }
+    }
+  }
+
+  var rangeStart = l[0];
+  for (var i = 1; i < l.length; ++i) {
+    if (l[i] == l[i - 1] + 1) continue;
+    processRange(i - 1);
+    rangeStart = l[i];
+  }
+  processRange(l.length - 1);
+  return ranges;
+}
+
 function headerListToInstructions(headerGroups, keyValueLRU,
                                   groupId, headerList) {
   var headerSet = {};
@@ -178,9 +203,12 @@ function headerListToInstructions(headerGroups, keyValueLRU,
     }
   }
 
+  var strangs = extractRanges(stogglSet);
+
   var instructions = {
     skvsto: skvstos,
     stoggl: Object.keys(stogglSet),
+    strang: strangs,
     sclone: sclones
   };
 
@@ -250,11 +278,13 @@ function serializeInstructions(instructions) {
         serializer.encodeAndWriteString(op.val);
       } else if (name == 'stoggl' || name == 'etoggl') {
         serializer.writeUint16(op);
+      } else if (name == 'strang' || name == 'etrang') {
+        serializer.writeUint16(op[0]);
+        serializer.writeUint16(op[1]);
       } else if (name == 'sclone' || name == 'clone') {
         serializer.writeUint16(op.keyIndex);
         serializer.encodeAndWriteString(op.val);
       }
-      // TODO(akalin): Implement other instructions.
     }
   }
   return serializer.getStringValue();
@@ -317,6 +347,13 @@ function deserializeInstructions(serializedInstructions) {
         is.push(deserializer.readUint16());
       }
       instruction.is = is;
+    } else if (OPCODES['strang'] == op) {
+      instruction.op = 'strang';
+      var is = [];
+      for (var i = 0; i < numFields; ++i) {
+        is.push([deserializer.readUint16(), deserializer.readUint16()]);
+      }
+      instruction.is = is;
     } else if (OPCODES['sclone'] == op) {
       instruction.op = 'sclone';
       var kivs = [];
@@ -368,6 +405,13 @@ function instructionsToHeaderList(headerGroups, keyValueLRU,
       var is = instruction.is;
       for (var j = 0; j < is.length; ++j) {
         toggleElement(stoggls, is[j]);
+      }
+    } else if (instruction.op == 'strang') {
+      var is = instruction.is;
+      for (var j = 0; j < is.length; ++j) {
+        for (var k = is[j][0]; k <= is[j][1]; ++k) {
+          toggleElement(stoggls, k);
+        }
       }
     } else if (instruction.op == 'sclone') {
       var kivs = instruction.kivs;
