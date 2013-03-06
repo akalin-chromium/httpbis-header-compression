@@ -272,11 +272,8 @@ Serializer.prototype.writeUint16 = function(x) {
 };
 
 Serializer.prototype.encodeAndWriteString = function(s) {
-  // TODO(akalin): Do Huffman encoding instead.
-  this.writeUint16(s.length);
-  for (var i = 0; i < s.length; ++i) {
-    this.writeUint8(s.charCodeAt(i));
-  }
+  var a = encodeASCII(s, CODEBOOK1);
+  Array.prototype.push.apply(this.buffer_, a);
 };
 
 var INSTRUCTION_NAMES = [
@@ -346,13 +343,9 @@ Deserializer.prototype.readUint16 = function() {
 };
 
 Deserializer.prototype.readAndDecodeString = function() {
-  // TODO(akalin): Do Huffman encoding instead.
-  var length = this.readUint16();
-  var a = [];
-  for (var i = 0; i < length; ++i) {
-    a[i] = String.fromCharCode(this.readUint8());
-  }
-  return a.join('');
+  var result = decodeASCII(this.buffer_, this.i_, INVERSE_CODEBOOK1);
+  this.i_ = result.end;
+  return result.str;
 };
 
 function deserializeInstructions(serializedInstructions) {
