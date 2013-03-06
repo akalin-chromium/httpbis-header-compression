@@ -1,22 +1,28 @@
 <script src="compressor.js"></script>
-<textarea id="uncompressed" cols="80" rows="40">
+
+<input id="compressButton" type="button" value="Compress" />
+<input id="decompressButton" type="button" value="Decompress" />
+<br />
+
+<textarea id="uncompressed" cols="40" rows="40">
 [
-  { "key": "key1", "value": "val1" },
-  { "key": "key2", "value": "val2" },
-  { "key": "key3", "value": "val3" },
-  { "key": "key4", "value": "val4" },
-  { "key": "key5", "value": "val5" }
+  { "key": "key1", "val": "val1" },
+  { "key": "key2", "val": "val2" },
+  { "key": "key3", "val": "val3" },
+  { "key": "key4", "val": "val4" },
+  { "key": "key5", "val": "val5" }
 ]
 </textarea>
-<input id="compressButton" type="button" value="Compress ->" />
-<input id="decompressButton" type="button" value="<- Decompress" />
-<textarea id="compressed" cols="80" rows="40">
+<textarea id="intermediate" cols="40" rows="40">
+</textarea>
+<textarea id="compressed" cols="40" rows="40">
 </textarea>
 
 <script>
 'use strict';
 
 var uncompressedTextarea = document.getElementById('uncompressed');
+var intermediateTextarea = document.getElementById('intermediate');
 var compressedTextarea = document.getElementById('compressed');
 var compressButton = document.getElementById('compressButton');
 
@@ -25,11 +31,25 @@ function doCompress() {
   var headerList = JSON.parse(input);
   var instructions = headerListToInstructions(headerList);
   var serializedInstructions = serializeInstructions(instructions);
-  var output = {
+
+  var inputLength = 0;
+  for (var i = 0; i < headerList.length; ++i) {
+    inputLength += headerList[i].key.length;
+    inputLength += headerList[i].val.length;
+  }
+  var outputLength = serializedInstructions.length;
+  var compressionRatio = inputLength / outputLength;
+
+  var intermediate = {
     instructions: instructions,
-    serializedInstructions: serializedInstructions
+    inputLength: inputLength,
+    outputLength: outputLength,
+    compressionRatio: compressionRatio
   };
-  compressedTextarea.textContent = JSON.stringify(output, null, '  ');
+  intermediateTextarea.textContent = JSON.stringify(intermediate, null, '  ');
+
+  compressedTextarea.textContent =
+    JSON.stringify(serializedInstructions, null, '  ');
 }
 
 compressButton.addEventListener('click', doCompress, false);

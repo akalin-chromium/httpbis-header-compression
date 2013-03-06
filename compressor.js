@@ -69,7 +69,7 @@ function serializeInstructions(instructions) {
       var op = ops[j];
       if (name == 'skvsto' || name == 'ekvsto') {
         serializer.encodeAndWriteString(op.key);
-        serializer.encodeAndWriteString(op.value);
+        serializer.encodeAndWriteString(op.val);
       }
       // TODO(akalin): Implement other instructions.
     }
