@@ -59,3 +59,60 @@ function codeLengthsToCanonicalEncoding(codeLengths) {
   }
   return codes;
 }
+
+function encodeASCII(str, codebook) {
+  var a = [];
+  var aByte = 0;
+  var aByteBitLength = 0;
+  function appendCode(code, l) {
+    for (var i = 0; i < l; ++i) {
+      var bit = (code & (1 << (l - i - 1))) ? 1 : 0;
+      aByte = (aByte << 1) | bit;
+      ++aByteBitLength;
+      if (aByteBitLength == 8) {
+        a.push(aByte);
+        aByte = 0;
+        aByteBitLength = 0;
+      }
+    }
+  }
+  function finishCoding() {
+    var eofCode = codebook[256];
+    appendCode(eofCode.code, eofCode.l);
+    if (aByteBitLength > 0) {
+      aByte <<= (8 - aByteBitLength);
+      a.push(aByte);
+    }
+  }
+  for (var i = 0; i < str.length; ++i) {
+    var ch = str.charCodeAt(i);
+    var code = codebook[ch];
+    appendCode(code.code, code.l);
+  }
+  finishCoding();
+  return a;
+}
+
+function decodeASCII(a, inverseCodebook) {
+  var code = 0;
+  var codeLength = 0;
+  var str = '';
+  for (var i = 0; i < a.length * 8; ++i) {
+    var bit = (a[(i / 8) >>> 0] & (1 << (7 - (i % 8)))) ? 1 : 0;
+    code = (code << 1) | bit;
+    ++codeLength;
+    if (code >= inverseCodebook.length) {
+      throw new Error('Invalid code ' + code);
+    }
+    if (code in inverseCodebook && inverseCodebook[code].l == codeLength) {
+      var ch = inverseCodebook[code].i;
+      code = 0;
+      codeLength = 0;
+      if (ch == 256) {
+        break;
+      }
+      str += String.fromCharCode(ch);
+    }
+  }
+  return str;
+}
