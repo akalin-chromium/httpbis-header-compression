@@ -1,6 +1,36 @@
+<script src="compressor.js"></script>
 <textarea id="uncompressed" cols="80" rows="40">
+[
+  { "key": "key1", "value": "val1" },
+  { "key": "key2", "value": "val2" },
+  { "key": "key3", "value": "val3" },
+  { "key": "key4", "value": "val4" },
+  { "key": "key5", "value": "val5" }
+]
 </textarea>
-<input type="button" value="Compress ->" />
-<input type="button" value="<- Decompress" />
+<input id="compressButton" type="button" value="Compress ->" />
+<input id="decompressButton" type="button" value="<- Decompress" />
 <textarea id="compressed" cols="80" rows="40">
 </textarea>
+
+<script>
+'use strict';
+
+var uncompressedTextarea = document.getElementById('uncompressed');
+var compressedTextarea = document.getElementById('compressed');
+var compressButton = document.getElementById('compressButton');
+
+function doCompress() {
+  var input = uncompressedTextarea.textContent;
+  var headerList = JSON.parse(input);
+  var instructions = headerListToInstructions(headerList);
+  var serializedInstructions = serializeInstructions(instructions);
+  var output = {
+    instructions: instructions,
+    serializedInstructions: serializedInstructions
+  };
+  compressedTextarea.textContent = JSON.stringify(output, null, '  ');
+}
+
+compressButton.addEventListener('click', doCompress, false);
+</script>
