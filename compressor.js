@@ -218,36 +218,41 @@ Deserializer.prototype.readAndDecodeString = function() {
 function deserializeInstructions(serializedInstructions) {
   var deserializer = new Deserializer(serializedInstructions);
 
-  var skvstos = [];
-  var stoggls = [];
-  var sclones = [];
+  var instructions = [];
 
   while (deserializer.hasData()) {
     var op = deserializer.readUint8();
     var numFields = deserializer.readUint8() + 1;
+    var instruction = {};
     if (OPCODES['skvsto'] == op) {
+      instruction.op = 'skvsto';
+      var kvs = [];
       for (var i = 0; i < numFields; ++i) {
         var key = deserializer.readAndDecodeString();
         var val = deserializer.readAndDecodeString();
-        skvstos.push({ key: key, val: val });
+        kvs.push({ key: key, val: val });
       }
+      instruction.kvs = kvs;
     } else if (OPCODES['stoggl'] == op) {
+      instruction.op = 'stoggl';
+      var is = [];
       for (var i = 0; i < numFields; ++i) {
-        stoggls.push(deserializer.readUint16());
+        is.push(deserializer.readUint16());
       }
+      instruction.is = is;
     } else if (OPCODES['sclone'] == op) {
+      instruction.op = 'sclone';
+      var kivs = [];
       for (var i = 0; i < numFields; ++i) {
         var keyIndex = deserializer.readUint16();
         var val = deserializer.readAndDecodeString();
-        sclones.push({ keyIndex: keyIndex, val: val });
+        kivs.push({ keyIndex: keyIndex, val: val });
       }
+      instruction.kivs = kivs;
     }
     // TODO(akalin): Implement other instructions.
+    instructions.push(instruction);
   }
 
-  return {
-    skvsto: skvstos,
-    stoggl: stoggls,
-    sclone: sclones
-  };
+  return instructions;
 }
