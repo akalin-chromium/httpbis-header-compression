@@ -256,3 +256,40 @@ function deserializeInstructions(serializedInstructions) {
 
   return instructions;
 }
+
+function instructionsToHeaderList(instructions) {
+  var headerList = [];
+
+  var stoggls = {};
+
+  for (var i = 0; i < instructions.length; ++i) {
+    var instruction = instructions[i];
+    if (instruction.op == 'skvsto') {
+      var kvs = instruction.kvs;
+      Array.prototype.push.apply(headerList, kvs);
+    } else if (instruction.op == 'stoggl') {
+      var is = instruction.is;
+      for (var j = 0; j < is.length; ++j) {
+        var index = is[j];
+        if (index in stoggls) {
+          delete stoggls[index];
+        } else {
+          stoggls[index] = 1;
+        }
+      }
+    } else if (instruction.op == 'sclone') {
+      var kivs = instruction.kivs;
+      for (var j = 0; j < kivs.length; ++j) {
+        var key = STATIC_ENTRIES[kivs[j].keyIndex][0];
+        headerList.push({ key: key, val: kivs[j].val });
+      }
+    }
+  }
+
+  for (var i in stoggls) {
+    var e = STATIC_ENTRIES[i];
+    headerList.push({ key: e[0], value: e[1] });
+  }
+
+  return headerList;
+}

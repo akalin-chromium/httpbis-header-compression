@@ -73,6 +73,11 @@ function doRoundTrip() {
     deserializedInstructions: deserializedInstructions,
   };
   intermediate2Textarea.textContent = JSON.stringify(intermediate2, null, '  ');
+
+  var deserializedHeaderList =
+    instructionsToHeaderList(deserializedInstructions);
+  uncompressed2Textarea.textContent =
+    JSON.stringify(deserializedHeaderList, null, '  ');
 }
 
 roundTripButton.addEventListener('click', doRoundTrip, false);
