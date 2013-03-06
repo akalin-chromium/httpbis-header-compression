@@ -93,12 +93,15 @@ function encodeASCII(str, codebook) {
   return a;
 }
 
-function decodeASCII(a, inverseCodebook) {
+function decodeASCII(a, start, inverseCodebook) {
   var code = 0;
   var codeLength = 0;
   var str = '';
-  for (var i = 0; i < a.length * 8; ++i) {
-    var bit = (a[(i / 8) >>> 0] & (1 << (7 - (i % 8)))) ? 1 : 0;
+  var i = start * 8;
+  for (; i < a.length * 8; ++i) {
+    var byteIndex = (i / 8) >>> 0;
+    var b = (typeof(a) == 'string') ? a.charCodeAt(byteIndex) : a[byteIndex];
+    var bit = (b & (1 << (7 - (i % 8)))) ? 1 : 0;
     code = (code << 1) | bit;
     ++codeLength;
     if (code >= inverseCodebook.length) {
@@ -114,5 +117,5 @@ function decodeASCII(a, inverseCodebook) {
       str += String.fromCharCode(ch);
     }
   }
-  return str;
+  return { end: (((i / 8) >>> 0) + 1), str: str };
 }
