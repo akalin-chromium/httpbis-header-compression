@@ -41,14 +41,20 @@ var intermediate2Textarea = document.getElementById('intermediate2');
 var uncompressed2Textarea = document.getElementById('uncompressed2');
 var roundTripButton = document.getElementById('roundTripButton');
 
+var groupId = 0;
+
+var compressorHeaderGroups = [{}];
 var compressorKeyValueLRU = new KeyValueLRU();
+
+var decompressorHeaderGroups = [{}];
 var decompressorKeyValueLRU = new KeyValueLRU();
 
 function doRoundTrip() {
   var input = uncompressedTextarea.textContent;
   var headerList = JSON.parse(input);
   var instructions =
-    headerListToInstructions(compressorKeyValueLRU, headerList);
+    headerListToInstructions(compressorHeaderGroups, compressorKeyValueLRU,
+                             groupId, headerList);
   var serializedInstructions = serializeInstructions(instructions);
 
   var inputLength = 0;
@@ -60,6 +66,7 @@ function doRoundTrip() {
   var compressionRatio = inputLength / outputLength;
 
   var intermediate = {
+    compressorHeaderGroups: compressorHeaderGroups,
     compressorKeyValueLRU: compressorKeyValueLRU,
     instructions: instructions,
     inputLength: inputLength,
@@ -75,11 +82,13 @@ function doRoundTrip() {
     deserializeInstructions(serializedInstructions);
 
   var intermediate2 = {
+    decompressorHeaderGroups: decompressorHeaderGroups,
     decompressorKeyValueLRU: decompressorKeyValueLRU,
     deserializedInstructions: deserializedInstructions,
   };
   var deserializedHeaderList =
-    instructionsToHeaderList(decompressorKeyValueLRU, deserializedInstructions);
+    instructionsToHeaderList(decompressorHeaderGroups, decompressorKeyValueLRU,
+                             groupId, deserializedInstructions);
 
   intermediate2Textarea.textContent = JSON.stringify(intermediate2, null, '  ');
   uncompressed2Textarea.textContent =

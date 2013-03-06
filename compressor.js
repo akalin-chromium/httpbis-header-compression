@@ -133,33 +133,59 @@ KeyValueLRU.prototype.findEntryIndex = function(kv) {
   return (result && result.matchesValue) ? result : staticResult;
 };
 
-function headerListToInstructions(keyValueLRU, headerList) {
-  var skvstos = [];
-  var stoggls = [];
-  var sclones = [];
-
+function headerListToInstructions(headerGroups, keyValueLRU,
+                                  groupId, headerList) {
+  var headerSet = {};
   for (var i = 0; i < headerList.length; ++i) {
     var kv = headerList[i];
-    var result = keyValueLRU.findEntryIndex(kv);
-    if (result) {
-      if (result.matchesValue) {
-        stoggls.push(result.index);
-      } else {
-        sclones.push({ keyIndex: result.index, val: kv.val });
+    var key = kv.key;
+    var val = kv.val;
+    headerSet[key] = headerSet[key] || {};
+    headerSet[key][val] = 1;
+  }
+
+  var stogglSet = {};
+  for (var i in headerGroups[groupId]) {
+    var kv = keyValueLRU.entryAtIndex(i);
+    var key = kv.key;
+    var val = kv.val;
+    if (key in headerSet && kv.val in headerSet[key]) {
+      delete headerSet[key][val];
+      if (Object.keys(headerSet[key]).length == 0) {
+        delete headerSet[key];
       }
     } else {
-      skvstos.push(kv);
+      stogglSet[i] = 1;
+    }
+  }
+
+  var skvstos = [];
+  var sclones = [];
+
+  for (var key in headerSet) {
+    for (var val in headerSet[key]) {
+      var kv = { key: key, val: val };
+      var result = keyValueLRU.findEntryIndex(kv);
+      if (result) {
+        if (result.matchesValue) {
+          stogglSet[result.index] = 1;
+        } else {
+          sclones.push({ keyIndex: result.index, val: kv.val });
+        }
+      } else {
+        skvstos.push(kv);
+      }
     }
   }
 
   var instructions = {
     skvsto: skvstos,
-    stoggl: stoggls,
+    stoggl: Object.keys(stogglSet),
     sclone: sclones
   };
 
   instructionsToHeaderList(
-    keyValueLRU,
+    headerGroups, keyValueLRU, groupId,
     deserializeInstructions(serializeInstructions(instructions)));
 
   return instructions;
@@ -308,12 +334,29 @@ function deserializeInstructions(serializedInstructions) {
   return instructions;
 }
 
-function instructionsToHeaderList(keyValueLRU, instructions) {
+function toggleElement(s, e) {
+  if (e in s) {
+    delete s[e];
+  } else {
+    s[e] = 1;
+  }
+}
+
+function toggleSubset(s, t) {
+  for (var e in t) {
+    toggleElement(s, e);
+  }
+}
+
+function instructionsToHeaderList(headerGroups, keyValueLRU,
+                                  groupId, instructions) {
   var headerList = [];
 
   var stoggls = {};
 
   var storeLater = [];
+
+  var currentHeaderGroup = headerGroups[groupId];
 
   for (var i = 0; i < instructions.length; ++i) {
     var instruction = instructions[i];
@@ -324,12 +367,7 @@ function instructionsToHeaderList(keyValueLRU, instructions) {
     } else if (instruction.op == 'stoggl') {
       var is = instruction.is;
       for (var j = 0; j < is.length; ++j) {
-        var index = is[j];
-        if (index in stoggls) {
-          delete stoggls[index];
-        } else {
-          stoggls[index] = 1;
-        }
+        toggleElement(stoggls, is[j]);
       }
     } else if (instruction.op == 'sclone') {
       var kivs = instruction.kivs;
@@ -345,7 +383,11 @@ function instructionsToHeaderList(keyValueLRU, instructions) {
     }
   }
 
-  for (var i in stoggls) {
+  toggleSubset(currentHeaderGroup, stoggls);
+
+  var kvIndices = currentHeaderGroup;
+
+  for (var i in kvIndices) {
     var kv = keyValueLRU.entryAtIndex(i);
     if (!kv) throw new Error('Could not find LRU entry for ' + i);
     headerList.push(kv);
