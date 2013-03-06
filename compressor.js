@@ -17,8 +17,21 @@ function buildCodebook(freqTable) {
     getOptimalCodeLengths(freqTableAdjusted));
 }
 
+function buildInverseCodebook(codebook) {
+  var inverseCodebook = [];
+  for (var i = 0; i < codebook.length; ++i) {
+    if (codebook[i]) {
+      inverseCodebook[codebook[i].code] = { l: codebook[i].l, i: i };
+    }
+  }
+  return inverseCodebook;
+}
+
 var CODEBOOK1 = buildCodebook(FREQ_TABLE1);
 var CODEBOOK2 = buildCodebook(FREQ_TABLE2);
+
+var INVERSE_CODEBOOK1 = buildInverseCodebook(CODEBOOK1);
+var INVERSE_CODEBOOK2 = buildInverseCodebook(CODEBOOK2);
 
 var STATIC_ENTRIES = [
   { key: ':path', val: '/' },
