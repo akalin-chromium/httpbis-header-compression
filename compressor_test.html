@@ -1,7 +1,6 @@
 <script src="compressor.js"></script>
 
-<input id="compressButton" type="button" value="Compress" />
-<input id="decompressButton" type="button" value="Decompress" />
+<input id="roundTripButton" type="button" value="Round-trip" />
 <br />
 
 <textarea id="uncompressed" cols="40" rows="40">
@@ -23,6 +22,12 @@
 </textarea>
 <textarea id="compressed" cols="40" rows="40">
 </textarea>
+<textarea id="intermediate2" cols="40" rows="40">
+</textarea>
+
+<textarea id="uncompressed2" cols="40" rows="40">
+</textarea>
+
 
 <script>
 'use strict';
@@ -30,9 +35,11 @@
 var uncompressedTextarea = document.getElementById('uncompressed');
 var intermediateTextarea = document.getElementById('intermediate');
 var compressedTextarea = document.getElementById('compressed');
-var compressButton = document.getElementById('compressButton');
+var intermediate2Textarea = document.getElementById('intermediate2');
+var uncompressed2Textarea = document.getElementById('uncompressed2');
+var roundTripButton = document.getElementById('roundTripButton');
 
-function doCompress() {
+function doRoundTrip() {
   var input = uncompressedTextarea.textContent;
   var headerList = JSON.parse(input);
   var instructions = headerListToInstructions(headerList);
@@ -58,5 +65,5 @@ function doCompress() {
     JSON.stringify(serializedInstructions, null, '  ');
 }
 
-compressButton.addEventListener('click', doCompress, false);
+roundTripButton.addEventListener('click', doRoundTrip, false);
 </script>
