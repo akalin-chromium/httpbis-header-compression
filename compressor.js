@@ -87,15 +87,54 @@ function findStaticEntryIndex(kv) {
   }
 }
 
-function headerListToInstructions(headerList) {
+function KeyValueLRU() {
+  this.kvs_ = [];
+  this.indices_ = {};
+  this.firstEntryIndex_ = STATIC_ENTRIES.length;
+}
+
+// TODO(akalin): Implement a finite LRU.
+
+KeyValueLRU.prototype.store = function(kv) {
+  var i = this.kvs_.length;
+  this.kvs_.push(kv);
+  this.indices_[kv.key][kv.val] = i;
+};
+
+KeyValueLRU.prototype.entryAtIndex = function(i) {
+  return (i < this.firstEntryIndex_) ?
+    STATIC_ENTRIES[i] :
+    this.kvs_[i - this.firstEntryIndex_];
+};
+
+KeyValueLRU.prototype.findEntryIndex = function(kv) {
+  var result = findStaticEntryIndex(kv);
+  if (result) return result;
+  var keyIndex = this.indices_[kv.key];
+  if (!keyIndex) return null;
+  var valIndex = keyIndex[kv.val];
+  var result = {};
+  if (valIndex) {
+    result.index = valIndex;
+  } else {
+    for (v in keyIndex) {
+      result.index = keyIndex[v];
+      break;
+    }
+    result.matchesValue = true;
+  }
+  result.index += this.firstEntryIndex_;
+  return result;
+};
+
+function headerListToInstructions(keyValueLRU, headerList) {
   var skvstos = [];
   var stoggls = [];
   var sclones = [];
 
   for (var i = 0; i < headerList.length; ++i) {
     var kv = headerList[i];
-    // TODO(akalin): Implement the LRU.
-    var result = findStaticEntryIndex(kv);
+    var result = keyValueLRU.findEntryIndex(kv);
     if (result) {
       if (result.matchesValue) {
         stoggls.push(result.index);
@@ -257,7 +296,7 @@ function deserializeInstructions(serializedInstructions) {
   return instructions;
 }
 
-function instructionsToHeaderList(instructions) {
+function instructionsToHeaderList(keyValueLRU, instructions) {
   var headerList = [];
 
   var stoggls = {};
@@ -280,14 +319,19 @@ function instructionsToHeaderList(instructions) {
     } else if (instruction.op == 'sclone') {
       var kivs = instruction.kivs;
       for (var j = 0; j < kivs.length; ++j) {
-        var key = STATIC_ENTRIES[kivs[j].keyIndex].key;
+        var keyIndex = kivs[j].keyIndex;
+        var kv = keyValueLRU.entryAtIndex(keyIndex);
+        if (!kv) throw new Error('Could not find LRU entry for ' + keyIndex);
+        var key = kv.key;
         headerList.push({ key: key, val: kivs[j].val });
       }
     }
   }
 
   for (var i in stoggls) {
-    headerList.push(STATIC_ENTRIES[i]);
+    var kv = keyValueLRU.entryAtIndex(i);
+    if (!kv) throw new Error('Could not find LRU entry for ' + i);
+    headerList.push(kv);
   }
 
   return headerList;

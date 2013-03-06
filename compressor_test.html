@@ -41,10 +41,14 @@ var intermediate2Textarea = document.getElementById('intermediate2');
 var uncompressed2Textarea = document.getElementById('uncompressed2');
 var roundTripButton = document.getElementById('roundTripButton');
 
+var compressorKeyValueLRU = new KeyValueLRU();
+var decompressorKeyValueLRU = new KeyValueLRU();
+
 function doRoundTrip() {
   var input = uncompressedTextarea.textContent;
   var headerList = JSON.parse(input);
-  var instructions = headerListToInstructions(headerList);
+  var instructions =
+    headerListToInstructions(compressorKeyValueLRU, headerList);
   var serializedInstructions = serializeInstructions(instructions);
 
   var inputLength = 0;
@@ -75,7 +79,7 @@ function doRoundTrip() {
   intermediate2Textarea.textContent = JSON.stringify(intermediate2, null, '  ');
 
   var deserializedHeaderList =
-    instructionsToHeaderList(deserializedInstructions);
+    instructionsToHeaderList(decompressorKeyValueLRU, deserializedInstructions);
   uncompressed2Textarea.textContent =
     JSON.stringify(deserializedHeaderList, null, '  ');
 }
