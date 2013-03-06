@@ -1,76 +1,76 @@
 'use strict';
 
 var STATIC_ENTRIES = [
-  [ ':path', '/' ],
-  [ ':scheme', 'http' ],
-  [ ':scheme', 'https' ],
-  [ ':method', 'get' ],
-  [ ':host', '' ],
-  [ 'cookie', '' ],
-  [ ':status', '200' ],
-  [ ':status-text', 'OK' ],
-  [ ':version', '1.1' ],
-  [ 'accept', '' ],
-  [ 'accept-charset', '' ],
-  [ 'accept-encoding', '' ],
-  [ 'accept-language', '' ],
-  [ 'accept-ranges', '' ],
-  [ 'allow', '' ],
-  [ 'authorizations', '' ],
-  [ 'cache-control', '' ],
-  [ 'content-base', '' ],
-  [ 'content-encoding', '' ],
-  [ 'content-length', '' ],
-  [ 'content-location', '' ],
-  [ 'content-md5', '' ],
-  [ 'content-range', '' ],
-  [ 'content-type', '' ],
-  [ 'date', '' ],
-  [ 'etag', '' ],
-  [ 'expect', '' ],
-  [ 'expires', '' ],
-  [ 'from', '' ],
-  [ 'if-match', '' ],
-  [ 'if-modified-since', '' ],
-  [ 'if-none-match', '' ],
-  [ 'if-range', '' ],
-  [ 'if-unmodified-since', '' ],
-  [ 'last-modified', '' ],
-  [ 'location', '' ],
-  [ 'max-forwards', '' ],
-  [ 'origin', '' ],
-  [ 'pragma', '' ],
-  [ 'proxy-authenticate', '' ],
-  [ 'proxy-authorization', '' ],
-  [ 'range', '' ],
-  [ 'referer', '' ],
-  [ 'retry-after', '' ],
-  [ 'server', '' ],
-  [ 'set-cookie', '' ],
-  [ 'status', '' ],
-  [ 'te', '' ],
-  [ 'trailer', '' ],
-  [ 'transfer-encoding', '' ],
-  [ 'upgrade', '' ],
-  [ 'user-agent', '' ],
-  [ 'vary', '' ],
-  [ 'via', '' ],
-  [ 'warning', '' ],
-  [ 'www-authenticate', '' ],
-  [ 'access-control-allow-origin', '' ],
-  [ 'content-disposition', '' ],
-  [ 'get-dictionary', '' ],
-  [ 'p3p', '' ],
-  [ 'x-content-type-options', '' ],
-  [ 'x-frame-options', '' ],
-  [ 'x-powered-by', '' ],
-  [ 'x-xss-protection', '' ],
+  { key: ':path', val: '/' },
+  { key: ':scheme', val: 'http' },
+  { key: ':scheme', val: 'https' },
+  { key: ':method', val: 'get' },
+  { key: ':host', val: '' },
+  { key: 'cookie', val: '' },
+  { key: ':status', val: '200' },
+  { key: ':status-text', val: 'OK' },
+  { key: ':version', val: '1.1' },
+  { key: 'accept', val: '' },
+  { key: 'accept-charset', val: '' },
+  { key: 'accept-encoding', val: '' },
+  { key: 'accept-language', val: '' },
+  { key: 'accept-ranges', val: '' },
+  { key: 'allow', val: '' },
+  { key: 'authorizations', val: '' },
+  { key: 'cache-control', val: '' },
+  { key: 'content-base', val: '' },
+  { key: 'content-encoding', val: '' },
+  { key: 'content-length', val: '' },
+  { key: 'content-location', val: '' },
+  { key: 'content-md5', val: '' },
+  { key: 'content-range', val: '' },
+  { key: 'content-type', val: '' },
+  { key: 'date', val: '' },
+  { key: 'etag', val: '' },
+  { key: 'expect', val: '' },
+  { key: 'expires', val: '' },
+  { key: 'from', val: '' },
+  { key: 'if-match', val: '' },
+  { key: 'if-modified-since', val: '' },
+  { key: 'if-none-match', val: '' },
+  { key: 'if-range', val: '' },
+  { key: 'if-unmodified-since', val: '' },
+  { key: 'last-modified', val: '' },
+  { key: 'location', val: '' },
+  { key: 'max-forwards', val: '' },
+  { key: 'origin', val: '' },
+  { key: 'pragma', val: '' },
+  { key: 'proxy-authenticate', val: '' },
+  { key: 'proxy-authorization', val: '' },
+  { key: 'range', val: '' },
+  { key: 'referer', val: '' },
+  { key: 'retry-after', val: '' },
+  { key: 'server', val: '' },
+  { key: 'set-cookie', val: '' },
+  { key: 'status', val: '' },
+  { key: 'te', val: '' },
+  { key: 'trailer', val: '' },
+  { key: 'transfer-encoding', val: '' },
+  { key: 'upgrade', val: '' },
+  { key: 'user-agent', val: '' },
+  { key: 'vary', val: '' },
+  { key: 'via', val: '' },
+  { key: 'warning', val: '' },
+  { key: 'www-authenticate', val: '' },
+  { key: 'access-control-allow-origin', val: '' },
+  { key: 'content-disposition', val: '' },
+  { key: 'get-dictionary', val: '' },
+  { key: 'p3p', val: '' },
+  { key: 'x-content-type-options', val: '' },
+  { key: 'x-frame-options', val: '' },
+  { key: 'x-powered-by', val: '' },
+  { key: 'x-xss-protection', val: '' }
 ];
 
 var STATIC_ENTRY_INDICES = {};
 {
   for (var i = 0; i < STATIC_ENTRIES.length; ++i) {
-    STATIC_ENTRY_INDICES[STATIC_ENTRIES[i][0]] = i;
+    STATIC_ENTRY_INDICES[STATIC_ENTRIES[i].key] = i;
   }
 }
 
@@ -78,7 +78,7 @@ function findStaticEntryIndex(kv) {
   if (kv.key in STATIC_ENTRY_INDICES) {
     var i = STATIC_ENTRY_INDICES[kv.key];
     var result = { index: i };
-    if (STATIC_ENTRIES[i][1] == kv.val) {
+    if (STATIC_ENTRIES[i].val == kv.val) {
       result.matchesValue = true;
     }
     return result;
@@ -280,15 +280,14 @@ function instructionsToHeaderList(instructions) {
     } else if (instruction.op == 'sclone') {
       var kivs = instruction.kivs;
       for (var j = 0; j < kivs.length; ++j) {
-        var key = STATIC_ENTRIES[kivs[j].keyIndex][0];
+        var key = STATIC_ENTRIES[kivs[j].keyIndex].key;
         headerList.push({ key: key, val: kivs[j].val });
       }
     }
   }
 
   for (var i in stoggls) {
-    var e = STATIC_ENTRIES[i];
-    headerList.push({ key: e[0], value: e[1] });
+    headerList.push(STATIC_ENTRIES[i]);
   }
 
   return headerList;
