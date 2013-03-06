@@ -67,16 +67,50 @@ var STATIC_ENTRIES = [
   [ 'x-xss-protection', '' ],
 ];
 
+var STATIC_ENTRY_INDICES = {};
+{
+  for (var i = 0; i < STATIC_ENTRIES.length; ++i) {
+    STATIC_ENTRY_INDICES[STATIC_ENTRIES[i][0]] = i;
+  }
+}
+
+function findStaticEntryIndex(kv) {
+  if (kv.key in STATIC_ENTRY_INDICES) {
+    var i = STATIC_ENTRY_INDICES[kv.key];
+    var result = { index: i };
+    if (STATIC_ENTRIES[i] == kv.val) {
+      result.matchesValue = true;
+    }
+    return result;
+  } else {
+    return null;
+  }
+}
+
 function headerListToInstructions(headerList) {
   var skvstos = [];
+  var stoggls = [];
+  var sclones = [];
 
-  // TODO(akalin): Do something smarter here.
   for (var i = 0; i < headerList.length; ++i) {
-    skvstos.push(headerList[i]);
+    var kv = headerList[i];
+    // TODO(akalin): Implement the LRU.
+    var result = findStaticEntryIndex(kv);
+    if (result) {
+      if (result.matchesValue) {
+        stoggls.push(result.index);
+      } else {
+        sclones.push({ keyIndex: result.index, val: kv.val });
+      }
+    } else {
+      skvstos.push(kv);
+    }
   }
 
   return {
-    skvsto: skvstos
+    skvsto: skvstos,
+    stoggl: stoggls,
+    sclone: sclones
   };
 }
 
@@ -136,6 +170,11 @@ function serializeInstructions(instructions) {
       var op = ops[j];
       if (name == 'skvsto' || name == 'ekvsto') {
         serializer.encodeAndWriteString(op.key);
+        serializer.encodeAndWriteString(op.val);
+      } else if (name == 'stoggl' || name == 'etoggl') {
+        serializer.writeUint16(op);
+      } else if (name == 'sclone' || name == 'clone') {
+        serializer.writeUint16(op.keyIndex);
         serializer.encodeAndWriteString(op.val);
       }
       // TODO(akalin): Implement other instructions.
