@@ -41,3 +41,23 @@ Encoder.prototype.encodeIndexedHeader = function(index) {
   var prefixLength = 7;
   this.encodeInteger(opCode, prefixLength, index);
 }
+
+Encoder.prototype.encodeLiteralHeaderWithoutIndexing = function(
+  indexOrName, value) {
+  var opCode = 0x60;
+  var prefixLength = 5;
+  switch (typeof indexOrName) {
+    case 'number':
+      this.encodeInteger(opCode, prefixLength, indexOrName + 1);
+      this.encodeASCIIString(value);
+      return;
+
+    case 'string':
+      this.encodeInteger(opCode, prefixLength, 0);
+      this.encodeASCIIString(indexOrName);
+      this.encodeASCIIString(value);
+      return;
+  }
+
+  throw new Error('not an index or name: ' + indexOrName);
+}
