@@ -35,3 +35,9 @@ Encoder.prototype.encodeASCIIString = function(str) {
     this.encodeOctet(str.charCodeAt(i));
   }
 }
+
+Encoder.prototype.encodeIndexedHeader = function(index) {
+  var opCode = 0x80;
+  var prefixLength = 7;
+  this.encodeInteger(opCode, prefixLength, index);
+}
