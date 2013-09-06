@@ -28,3 +28,10 @@ Encoder.prototype.encodeInteger = function(firstOctetMask, N, I) {
   }
   this.encodeOctet(I);
 }
+
+Encoder.prototype.encodeASCIIString = function(str) {
+  this.encodeInteger(0, 0, str.length);
+  for (var i = 0; i < str.length; ++i) {
+    this.encodeOctet(str.charCodeAt(i));
+  }
+}
