@@ -187,3 +187,22 @@ ReferenceSet.prototype.offsetIndices = function(offset) {
   }
   this.references_ = newReferences;
 }
+
+function EncodingContext() {
+  this.encoder_ = new Encoder();
+  this.headerTable_ = new HeaderTable();
+  this.referenceSet_ = new ReferenceSet();
+}
+
+EncodingContext.prototype.flush = function() {
+  return this.encoder_.flush();
+}
+
+EncodingContext.prototype.encodeIndexedHeader = function(index) {
+  if (this.referenceSet_.hasReference(index)) {
+    this.referenceSet_.removeReference(index);
+  } else {
+    this.referenceSet_.addReference(index);
+  }
+  this.encoder_.encodeIndexedHeader(index);
+}
