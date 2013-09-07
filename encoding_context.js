@@ -167,6 +167,10 @@ function ReferenceSet() {
   this.references_ = {};
 }
 
+ReferenceSet.prototype.hasReference = function(index) {
+  return index.toString(10) in this.references_;
+}
+
 ReferenceSet.prototype.addReference = function(index) {
   this.references_[index.toString(10)] = 1;
 }
