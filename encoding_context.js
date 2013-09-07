@@ -229,3 +229,22 @@ EncodingContext.prototype.encodeLiteralHeaderWithIncrementalIndexing = function(
   this.referenceSet_.addReference(result.index);
   this.encoder_.encodeLiteralHeaderWithIncrementalIndexing(indexOrName, value);
 }
+
+EncodingContext.prototype.encodeLiteralHeaderWithSubstitutionIndexing =
+function(indexOrName, substitutedIndex, value) {
+  var name;
+  switch (typeof indexOrName) {
+    case 'number':
+      name = this.headerTable_.getEntryName(indexOrName);
+      break;
+
+    case 'string':
+      name = indexOrName;
+      break;
+  }
+  var result = this.headerTable_.tryReplaceEntry(substitutedIndex, name, value);
+  this.referenceSet_.offsetIndices(result.offset);
+  this.referenceSet_.addReference(result.index);
+  this.encoder_.encodeLiteralHeaderWithSubstitutionIndexing(
+    indexOrName, substitutedIndex, value);
+}
