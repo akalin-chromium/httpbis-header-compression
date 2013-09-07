@@ -211,3 +211,21 @@ EncodingContext.prototype.encodeLiteralHeaderWithoutIndexing = function(
   indexOrName, value) {
   this.encoder_.encodeLiteralHeaderWithoutIndexing(indexOrName, value);
 }
+
+EncodingContext.prototype.encodeLiteralHeaderWithIncrementalIndexing = function(
+  indexOrName, value) {
+  var name;
+  switch (typeof indexOrName) {
+    case 'number':
+      name = this.headerTable_.getEntryName(indexOrName);
+      break;
+
+    case 'string':
+      name = indexOrName;
+      break;
+  }
+  var result = this.headerTable_.tryAppendEntry(name, value);
+  this.referenceSet_.offsetIndices(result.offset);
+  this.referenceSet_.addReference(result.index);
+  this.encoder_.encodeLiteralHeaderWithIncrementalIndexing(indexOrName, value);
+}
