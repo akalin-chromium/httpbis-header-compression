@@ -206,3 +206,8 @@ EncodingContext.prototype.encodeIndexedHeader = function(index) {
   }
   this.encoder_.encodeIndexedHeader(index);
 }
+
+EncodingContext.prototype.encodeLiteralHeaderWithoutIndexing = function(
+  indexOrName, value) {
+  this.encoder_.encodeLiteralHeaderWithoutIndexing(indexOrName, value);
+}
