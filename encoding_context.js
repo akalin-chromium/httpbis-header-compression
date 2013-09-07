@@ -2,7 +2,6 @@
 
 function Encoder() {
   this.buffer_ = [];
-  this.bitIndex_ = 0;
 }
 
 Encoder.prototype.encodeOctet = function(o) {
@@ -102,6 +101,12 @@ Encoder.prototype.encodeLiteralHeaderWithSubstitutionIndexing = function(
   }
 
   throw new Error('not an index or name: ' + indexOrName);
+}
+
+Encoder.prototype.flush = function() {
+  var buffer = this.buffer_;
+  this.buffer_ = [];
+  return buffer;
 }
 
 function HeaderTable() {
