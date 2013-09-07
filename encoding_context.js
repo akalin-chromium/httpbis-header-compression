@@ -145,3 +145,24 @@ HeaderTable.prototype.tryReplaceEntry = function(index, name, value) {
     }
   }
 }
+
+function ReferenceSet() {
+  this.references_ = {};
+}
+
+ReferenceSet.prototype.addReference = function(index) {
+  this.references_[index.toString(10)] = 1;
+}
+
+ReferenceSet.prototype.removeReference = function(index) {
+  delete this.references_[index.toString(10)];
+}
+
+ReferenceSet.prototype.offsetIndices = function(offset) {
+  var newReferences = {};
+  for (var indexStr in this.references_) {
+    var index = parseInt(indexStr, 10);
+    newReferences[index + offset] = 1;
+  }
+  this.references_ = newReferences;
+}
