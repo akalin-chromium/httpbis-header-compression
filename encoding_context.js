@@ -125,3 +125,23 @@ HeaderTable.prototype.tryAppendEntry = function(name, value) {
     this.entries_.push({ name: name, value: value });
   }
 }
+
+HeaderTable.prototype.tryReplaceEntry = function(index, name, value) {
+  var existingEntry = this.entries_[index];
+  var sizeDelta =
+    (name.length + value.length + 32) -
+    (existingEntry.name.length + existingEntry.value.length + 32);
+  while (this.entries_.length > 0 && this.size_ + sizeDelta > this.maxSize_) {
+    --index;
+    this.removeFirstEntry_();
+  }
+  if (this.size_ + sizeDelta <= this.maxSize_) {
+    this.size_ += sizeDelta;
+    var newEntry = { name: name, value: value };
+    if (index >= 0) {
+      this.entries_[index] = newEntry;
+    } else {
+      this.entries_.unshift(newEntry);
+    }
+  }
+}
