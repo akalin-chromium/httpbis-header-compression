@@ -103,3 +103,25 @@ Encoder.prototype.encodeLiteralHeaderWithSubstitutionIndexing = function(
 
   throw new Error('not an index or name: ' + indexOrName);
 }
+
+function HeaderTable() {
+  this.entries_ = [];
+  this.size_ = 0;
+  this.maxSize_ = 4096;
+}
+
+HeaderTable.prototype.removeFirstEntry_ = function() {
+  var firstEntry = this.entries_.shift();
+  this.size_ -= firstEntry.name.length + firstEntry.value.length + 32;
+}
+
+HeaderTable.prototype.tryAppendEntry = function(name, value) {
+  var sizeDelta = name.length + value.length + 32;
+  while (this.entries_.length > 0 && this.size_ + sizeDelta > this.maxSize_) {
+    this.removeFirstEntry_();
+  }
+  if (this.size_ + sizeDelta <= this.maxSize_) {
+    this.size_ += sizeDelta;
+    this.entries_.push({ name: name, value: value });
+  }
+}
