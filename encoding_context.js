@@ -189,35 +189,28 @@ ReferenceSet.prototype.offsetIndices = function(offset) {
 }
 
 function EncodingContext() {
-  this.encoder_ = new Encoder();
   this.headerTable_ = new HeaderTable();
   this.referenceSet_ = new ReferenceSet();
 }
 
-EncodingContext.prototype.flush = function() {
-  return this.encoder_.flush();
-}
-
-EncodingContext.prototype.addInitialHeader = function(name, value) {
+EncodingContext.prototype.processInitialHeader = function(name, value) {
   this.headerTable_.tryAppendEntry(name, value);
 }
 
-EncodingContext.prototype.encodeIndexedHeader = function(index) {
+EncodingContext.prototype.processIndexedHeader = function(index) {
   if (this.referenceSet_.hasReference(index)) {
     this.referenceSet_.removeReference(index);
   } else {
     this.referenceSet_.addReference(index);
   }
-  this.encoder_.encodeIndexedHeader(index);
 }
 
-EncodingContext.prototype.encodeLiteralHeaderWithoutIndexing = function(
+EncodingContext.prototype.processLiteralHeaderWithoutIndexing = function(
   indexOrName, value) {
-  this.encoder_.encodeLiteralHeaderWithoutIndexing(indexOrName, value);
 }
 
-EncodingContext.prototype.encodeLiteralHeaderWithIncrementalIndexing = function(
-  indexOrName, value) {
+EncodingContext.prototype.processLiteralHeaderWithIncrementalIndexing =
+function(indexOrName, value) {
   var name;
   switch (typeof indexOrName) {
     case 'number':
@@ -231,10 +224,9 @@ EncodingContext.prototype.encodeLiteralHeaderWithIncrementalIndexing = function(
   var result = this.headerTable_.tryAppendEntry(name, value);
   this.referenceSet_.offsetIndices(result.offset);
   this.referenceSet_.addReference(result.index);
-  this.encoder_.encodeLiteralHeaderWithIncrementalIndexing(indexOrName, value);
 }
 
-EncodingContext.prototype.encodeLiteralHeaderWithSubstitutionIndexing =
+EncodingContext.prototype.processLiteralHeaderWithSubstitutionIndexing =
 function(indexOrName, substitutedIndex, value) {
   var name;
   switch (typeof indexOrName) {
@@ -249,6 +241,4 @@ function(indexOrName, substitutedIndex, value) {
   var result = this.headerTable_.tryReplaceEntry(substitutedIndex, name, value);
   this.referenceSet_.offsetIndices(result.offset);
   this.referenceSet_.addReference(result.index);
-  this.encoder_.encodeLiteralHeaderWithSubstitutionIndexing(
-    indexOrName, substitutedIndex, value);
 }
