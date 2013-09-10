@@ -110,18 +110,8 @@ Encoder.prototype.flush = function() {
 }
 
 function HeaderEncoder(direction) {
+  this.encodingContext_ = new EncodingContext(direction);
   this.encoder_ = new Encoder();
-  this.encodingContext_ = new EncodingContext();
-
-  var initialHeaderTable =
-    (direction == REQUEST) ?
-    PRE_DEFINED_REQUEST_HEADER_TABLE :
-    PRE_DEFINED_RESPONSE_HEADER_TABLE;
-  for (var i = 0; i < initialHeaderTable.length; ++i) {
-    var nameValuePair = initialHeaderTable[i];
-    this.encodingContext_.processInitialHeader(
-      nameValuePair[0], nameValuePair[1]);
-  }
 }
 
 HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
