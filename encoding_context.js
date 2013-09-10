@@ -198,6 +198,10 @@ EncodingContext.prototype.flush = function() {
   return this.encoder_.flush();
 }
 
+EncodingContext.prototype.addInitialHeader = function(name, value) {
+  this.headerTable_.tryAppendEntry(name, value);
+}
+
 EncodingContext.prototype.encodeIndexedHeader = function(index) {
   if (this.referenceSet_.hasReference(index)) {
     this.referenceSet_.removeReference(index);
