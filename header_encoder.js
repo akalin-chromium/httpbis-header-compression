@@ -111,16 +111,16 @@ Encoder.prototype.flush = function() {
 
 function HeaderEncoder(direction) {
   this.encodingContext_ = new EncodingContext(direction);
-  this.encoder_ = new Encoder();
 }
 
 HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
+  var encoder = new Encoder();
   for (var i = 0; i < headerSet.length; ++i) {
     var nameValuePair = headerSet[i];
     this.encodingContext_.processLiteralHeaderWithoutIndexing(
       nameValuePair[0], nameValuePair[1]);
-    this.encoder_.encodeLiteralHeaderWithoutIndexing(
+    encoder.encodeLiteralHeaderWithoutIndexing(
       nameValuePair[0], nameValuePair[1]);
   }
-  return this.encoder_.flush();
+  return encoder.flush();
 }
