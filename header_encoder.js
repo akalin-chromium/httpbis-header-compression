@@ -23,7 +23,9 @@ Encoder.prototype.encodeInteger = function(firstOctetMask, N, I) {
   I -= nextMarker;
   while (I >= 128) {
     this.encodeOctet(I % 128 | 128);
-    I /= 128;
+    // Divide I by 128. (Remember that / in JavaScript is
+    // floating-point division).
+    I >>= 7;
   }
   this.encodeOctet(I);
 }

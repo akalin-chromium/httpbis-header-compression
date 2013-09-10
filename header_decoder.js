@@ -45,6 +45,8 @@ Decoder.prototype.decodeNextInteger = function(N) {
     if (nextOctet === null) {
       return null;
     }
+    // Check the high bit. (Remember that / in JavaScript is
+    // floating-point division).
     hasMore = ((nextOctet & 0x80) != 0);
     I += (nextOctet % 128) << shift;
     shift += 7;
