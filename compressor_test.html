@@ -54,7 +54,7 @@ var headerDecoder = new HeaderDecoder(REQUEST);
 function headerSetFromString(str) {
   var headerStrs = str.split('\n');
   return headerStrs.map(function(headerStr) {
-    var match = headerStr.match(/^(.*): ?(.*)$/);
+    var match = headerStr.match(/^(.*): *(.*)$/);
     return match ? [match[1], match[2]] : null;
   }).filter(function(e) {
     return e;
