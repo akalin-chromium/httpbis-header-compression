@@ -11,19 +11,19 @@
 <br />
 
 <textarea id="uncompressed" cols="60" rows="20">
-:scheme: https
 :host: www.google.com
-:path: /
 :method: GET
+:path: /
+:scheme: https
+:version: HTTP/1.1
 accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
 accept-charset: ISO-8859-1,utf-8;q=0.7,*;q=0.3
 accept-encoding: gzip,deflate,sdch
 accept-language: en-US,en;q=0.8
-user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.32 (KHTML, like Gecko) Chrome/27.0.1425.0 Safari/537.32
 cache-control: max-age=0
-:version: HTTP/1.1
 custom-header: custom-value
 p3p: 
+user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.32 (KHTML, like Gecko) Chrome/27.0.1425.0 Safari/537.32
 </textarea>
 <textarea id="uncompressed2" cols="60" rows="20">
 </textarea>
@@ -61,15 +61,6 @@ function headerSetFromString(str) {
   });
 }
 
-function headerSetToString(headerSet) {
-  var str = '';
-  for (var i = 0; i < headerSet.length; ++i) {
-    var header = headerSet[i];
-    str += header[0] + ': ' + header[1] + '\n';
-  }
-  return str;
-}
-
 // TODO(akalin): Handle lower-casing.
 function headerCompare(header1, header2) {
   if (header1[0] < header2[0]) {
@@ -85,6 +76,17 @@ function headerCompare(header1, header2) {
     return +1;
   }
   return 0;
+}
+
+function headerSetToString(headerSet) {
+  var str = '';
+  var headerSetCopy = headerSet.slice(0);
+  headerSetCopy.sort(headerCompare);
+  for (var i = 0; i < headerSetCopy.length; ++i) {
+    var header = headerSetCopy[i];
+    str += header[0] + ': ' + header[1] + '\n';
+  }
+  return str;
 }
 
 function headerSetsEqual(headerSet1, headerSet2) {
