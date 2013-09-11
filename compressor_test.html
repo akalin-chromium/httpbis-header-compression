@@ -5,6 +5,8 @@
 <input id="roundTripButton" type="button" value="Round-trip" />
 <br />
 
+<p>Header sets equal: <span id="headerSetsEqual"></span></p>
+
 <textarea id="uncompressed" cols="40" rows="40">
 [
   [ ":host", "www.google.com" ],
@@ -37,6 +39,8 @@
 <script>
 'use strict';
 
+var headerSetsEqualSpan = document.getElementById('headerSetsEqual');
+
 var uncompressedTextarea = document.getElementById('uncompressed');
 var encoderContextTextarea = document.getElementById('encoderContext');
 var intermediateTextarea = document.getElementById('intermediate');
@@ -47,6 +51,42 @@ var roundTripButton = document.getElementById('roundTripButton');
 
 var headerEncoder = new HeaderEncoder(REQUEST, 4);
 var headerDecoder = new HeaderDecoder(REQUEST);
+
+// TODO(akalin): Handle lower-casing.
+function headerCompare(header1, header2) {
+  if (header1[0] < header2[0]) {
+    return -1;
+  }
+  if (header1[0] > header2[0]) {
+    return +1;
+  }
+  if (header1[1] < header2[1]) {
+    return -1;
+  }
+  if (header1[1] > header2[1]) {
+    return +1;
+  }
+  return 0;
+}
+
+function headerSetsEqual(headerSet1, headerSet2) {
+  if (headerSet1.length != headerSet2.length) {
+    return false;
+  }
+  var length = headerSet1.length;
+
+  var headerSetCopy1 = headerSet1.slice(0);
+  var headerSetCopy2 = headerSet2.slice(0);
+  headerSetCopy1.sort(headerCompare);
+  headerSetCopy2.sort(headerCompare);
+  for (var i = 0; i < length; ++i) {
+    if (headerCompare(headerSetCopy1[i], headerSetCopy2[i]) != 0) {
+      return false;
+    }
+  }
+
+  return true;
+}
 
 function doRoundTrip() {
   var input = uncompressedTextarea.value;
@@ -81,6 +121,9 @@ function doRoundTrip() {
 
   uncompressed2Textarea.textContent =
     JSON.stringify(deserializedHeaderSet, null, '  ');
+
+  var doHeaderSetsEqual = headerSetsEqual(headerSet, deserializedHeaderSet);
+  headerSetsEqualSpan.textContent = (doHeaderSetsEqual ? "true" : "false");
 }
 
 roundTripButton.addEventListener('click', doRoundTrip, false);
