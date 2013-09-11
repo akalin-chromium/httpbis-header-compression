@@ -109,13 +109,27 @@ Decoder.prototype.decodeNextOpcode = function(encodingContext) {
     }
     encodingContext.processLiteralHeaderWithSubstitutionIndexing(
       indexOrName, substitutedIndex, value);
-  } else if ((nextOctet >> 5) == 0x1) {
+  } else if ((nextOctet >> 5) == 0x2) {
     // Literal header with incremental indexing.
     var indexPlusOneOrZero = this.decodeNextInteger(5);
     if (indexPlusOneOrZero === null) {
       return null;
     }
-    return null;
+    var indexOrName = null;
+    if (indexPlusOneOrZero == 0) {
+      indexOrName = this.decodeNextASCIIString();
+    } else {
+      indexOrName = indexPlusOneOrZero - 1;
+    }
+    if (indexOrName === null) {
+      return null;
+    }
+    var value = this.decodeNextASCIIString();
+    if (value === null) {
+      return null;
+    }
+    encodingContext.processLiteralHeaderWithIncrementalIndexing(
+      indexOrName, value);
   } else if ((nextOctet >> 5) == 0x3) {
     // Literal header without indexing.
     var indexPlusOneOrZero = this.decodeNextInteger(5);

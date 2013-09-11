@@ -65,7 +65,7 @@ Encoder.prototype.encodeLiteralHeaderWithoutIndexing = function(
 
 Encoder.prototype.encodeLiteralHeaderWithIncrementalIndexing = function(
   indexOrName, value) {
-  var opCode = 0x20;
+  var opCode = 0x40;
   var prefixLength = 5;
   switch (typeof indexOrName) {
     case 'number':
@@ -153,6 +153,17 @@ HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
           index, index, value);
         encoder.encodeLiteralHeaderWithSubstitutionIndexing(
           index, index, value);
+        touched.addReference(index);
+        continue;
+      }
+    }
+
+    if (this.compressionLevel_ > 3) {
+      if (index === null) {
+        this.encodingContext_.processLiteralHeaderWithIncrementalIndexing(
+          name, value);
+        encoder.encodeLiteralHeaderWithIncrementalIndexing(name, value);
+        index = this.encodingContext_.findName(name);
         touched.addReference(index);
         continue;
       }
