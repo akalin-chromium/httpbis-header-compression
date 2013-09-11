@@ -108,6 +108,19 @@ function headerSetsEqual(headerSet1, headerSet2) {
   return true;
 }
 
+function escapeOctets(octets) {
+  var str = '';
+  for (var i = 0; i < octets.length; ++i) {
+    var octet = octets[i];
+    if (octet > 31 && octet < 127) {
+      str += String.fromCharCode(octet);
+    } else {
+      str += '\\' + octet;
+    }
+  }
+  return str;
+}
+
 function doRoundTrip() {
   var input = uncompressedTextarea.value;
   var headerSet = headerSetFromString(input);
@@ -121,7 +134,7 @@ function doRoundTrip() {
     inputLength += headerSet[i][0].length;
     inputLength += headerSet[i][1].length;
   }
-  var encodedHeaderSetStr = String.fromCharCode.apply(null, encodedHeaderSet);
+  var encodedHeaderSetStr = escapeOctets(encodedHeaderSet);
   var outputLength = encodedHeaderSet.length;
   var compressionRatio = inputLength / outputLength;
   var headerSetsEqualValue = headerSetsEqual(headerSet, deserializedHeaderSet);
