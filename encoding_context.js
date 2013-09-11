@@ -157,8 +157,17 @@ ReferenceSet.prototype.hasReference = function(index) {
   return index.toString(10) in this.references_;
 }
 
-ReferenceSet.prototype.addReference = function(index) {
-  this.references_[index.toString(10)] = 1;
+ReferenceSet.prototype.getReferenceCount = function(index) {
+  return this.hasReference(index) ? this.references_[index.toString(10)] : null;
+}
+
+ReferenceSet.prototype.addReference = function(index, count) {
+  index = index.toString(10);
+  if (count === undefined) {
+    count = 1;
+  }
+  this.references_[index] = this.references_[index] || 0;
+  this.references_[index] += count;
 }
 
 ReferenceSet.prototype.removeReference = function(index) {

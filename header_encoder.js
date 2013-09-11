@@ -118,7 +118,7 @@ function HeaderEncoder(direction, compressionLevel) {
 
 HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
   var encoder = new Encoder();
-  var touched = new ReferenceSet();
+  var emitted = new ReferenceSet();
   for (var i = 0; i < headerSet.length; ++i) {
     var nameValuePair = headerSet[i];
     var name = nameValuePair[0];
@@ -127,17 +127,31 @@ HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
       var nameValueIndex = this.encodingContext_.findNameAndValue(name, value);
       if (nameValueIndex !== null) {
         if (this.encodingContext_.hasReference(nameValueIndex)) {
-          if (touched.hasReference(nameValueIndex)) {
+          var emittedCount = emitted.getReferenceCount(nameValueIndex);
+          if (emittedCount === null) {
+            emitted.addReference(nameValueIndex, 0);
+          } else if (emittedCount == 0) {
             encoder.encodeIndexedHeader(nameValueIndex);
             this.encodingContext_.processIndexedHeader(nameValueIndex);
             encoder.encodeIndexedHeader(nameValueIndex);
             this.encodingContext_.processIndexedHeader(nameValueIndex);
+            encoder.encodeIndexedHeader(nameValueIndex);
+            this.encodingContext_.processIndexedHeader(nameValueIndex);
+            encoder.encodeIndexedHeader(nameValueIndex);
+            this.encodingContext_.processIndexedHeader(nameValueIndex);
+            emitted.addReference(nameValueIndex, 2);
+          } else {
+            encoder.encodeIndexedHeader(nameValueIndex);
+            this.encodingContext_.processIndexedHeader(nameValueIndex);
+            encoder.encodeIndexedHeader(nameValueIndex);
+            this.encodingContext_.processIndexedHeader(nameValueIndex);
+            emitted.addReference(nameValueIndex, 1);
           }
         } else {
           encoder.encodeIndexedHeader(nameValueIndex);
           this.encodingContext_.processIndexedHeader(nameValueIndex);
+          emitted.addReference(nameValueIndex, 1);
         }
-        touched.addReference(nameValueIndex);
         continue;
       }
     }
@@ -154,8 +168,8 @@ HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
             index, index, value);
         encoder.encodeLiteralHeaderWithSubstitutionIndexing(
           index, index, value);
-        touched.offsetIndices(result.offset);
-        touched.addReference(result.index);
+        emitted.offsetIndices(result.offset);
+        emitted.addReference(result.index);
         continue;
       }
     }
@@ -166,8 +180,8 @@ HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
           this.encodingContext_.processLiteralHeaderWithIncrementalIndexing(
             name, value);
         encoder.encodeLiteralHeaderWithIncrementalIndexing(name, value);
-        touched.offsetIndices(result.offset);
-        touched.addReference(result.index);
+        emitted.offsetIndices(result.offset);
+        emitted.addReference(result.index);
         continue;
       }
     }
@@ -178,7 +192,7 @@ HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
     encoder.encodeLiteralHeaderWithoutIndexing(indexOrName, value);
   }
 
-  var untouched = this.encodingContext_.getDifference(touched);
+  var untouched = this.encodingContext_.getDifference(emitted);
   var self = this;
   untouched.processReferences(function(index) {
     encoder.encodeIndexedHeader(index);
