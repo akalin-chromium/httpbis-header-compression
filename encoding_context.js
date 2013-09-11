@@ -211,10 +211,6 @@ EncodingContext.prototype.hasReference = function(index) {
   return this.referenceSet_.hasReference(index);
 };
 
-EncodingContext.prototype.processReferences = function(fn) {
-  return this.referenceSet_.processReferences(fn);
-};
-
 EncodingContext.prototype.getIndexedHeaderName = function(index) {
   var entry = this.headerTable_.getEntry(index);
   if (entry === null) {
@@ -246,9 +242,10 @@ EncodingContext.prototype.getDifference = function(touched) {
 EncodingContext.prototype.processIndexedHeader = function(index) {
   if (this.referenceSet_.hasReference(index)) {
     this.referenceSet_.removeReference(index);
-  } else {
-    this.referenceSet_.addReference(index);
+    return false;
   }
+  this.referenceSet_.addReference(index);
+  return true;
 }
 
 EncodingContext.prototype.processLiteralHeaderWithoutIndexing = function(

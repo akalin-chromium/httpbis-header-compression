@@ -71,7 +71,7 @@ Decoder.prototype.decodeNextASCIIString = function() {
   return str;
 };
 
-Decoder.prototype.decodeNextOpcode = function(encodingContext) {
+Decoder.prototype.decodeNextOpcode = function(encodingContext, touched) {
   var nextOctet = this.peekNextOctet();
   if (nextOctet === null) {
     return null;
@@ -82,8 +82,11 @@ Decoder.prototype.decodeNextOpcode = function(encodingContext) {
     if (index === null) {
       return null;
     }
-    encodingContext.processIndexedHeader(index);
-    return undefined;
+    if (!encodingContext.processIndexedHeader(index)) {
+      return undefined;
+    }
+    touched.addReference(index);
+    return encodingContext.getIndexedHeaderNameAndValue(index);
   } else if ((nextOctet >> 6) == 0x0) {
     // Literal header with substitution indexing.
     var indexPlusOneOrZero = this.decodeNextInteger(6);
@@ -107,8 +110,13 @@ Decoder.prototype.decodeNextOpcode = function(encodingContext) {
     if (value === null) {
       return null;
     }
-    encodingContext.processLiteralHeaderWithSubstitutionIndexing(
-      indexOrName, substitutedIndex, value);
+    var result =
+      encodingContext.processLiteralHeaderWithSubstitutionIndexing(
+        indexOrName, substitutedIndex, value);
+    touched.offsetIndices(result.offset);
+    touched.addReference(result.index);
+    var name = encodingContext.getIndexedHeaderName(result.index);
+    return { name: name, value: value };
   } else if ((nextOctet >> 5) == 0x2) {
     // Literal header with incremental indexing.
     var indexPlusOneOrZero = this.decodeNextInteger(5);
@@ -128,8 +136,12 @@ Decoder.prototype.decodeNextOpcode = function(encodingContext) {
     if (value === null) {
       return null;
     }
-    encodingContext.processLiteralHeaderWithIncrementalIndexing(
+    var result = encodingContext.processLiteralHeaderWithIncrementalIndexing(
       indexOrName, value);
+    touched.offsetIndices(result.offset);
+    touched.addReference(result.index);
+    var name = encodingContext.getIndexedHeaderName(result.index);
+    return { name: name, value: value };
   } else if ((nextOctet >> 5) == 0x3) {
     // Literal header without indexing.
     var indexPlusOneOrZero = this.decodeNextInteger(5);
@@ -163,9 +175,10 @@ function HeaderDecoder(direction) {
 
 HeaderDecoder.prototype.decodeHeaderSet = function(encodedHeaderSet) {
   var decoder = new Decoder(encodedHeaderSet);
+  var touched = new ReferenceSet();
   var headerSet = [];
   while (decoder.hasData()) {
-    var result = decoder.decodeNextOpcode(this.encodingContext_);
+    var result = decoder.decodeNextOpcode(this.encodingContext_, touched);
     if (result === null) {
       return null;
     }
@@ -174,11 +187,12 @@ HeaderDecoder.prototype.decodeHeaderSet = function(encodedHeaderSet) {
     }
     headerSet.push([ result.name, result.value ]);
   }
+  var untouched = this.encodingContext_.getDifference(touched);
   var self = this;
-  this.encodingContext_.processReferences(function(index) {
+  untouched.processReferences(function(index) {
     var result = self.encodingContext_.getIndexedHeaderNameAndValue(index);
     if (result === null) {
-      return null;
+      return;
     }
     headerSet.push([ result.name, result.value ]);
   });
