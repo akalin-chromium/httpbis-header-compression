@@ -185,7 +185,10 @@ ReferenceSet.prototype.getDifference = function(other) {
 ReferenceSet.prototype.offsetIndices = function(offset) {
   var newReferences = {};
   this.processReferences(function(index) {
-    newReferences[index + offset] = 1;
+    var newIndex = index + offset;
+    if (newIndex >= 0) {
+      newReferences[newIndex] = 1;
+    }
   });
   this.references_ = newReferences;
 }
