@@ -1,6 +1,9 @@
 This is an implementation of the header compression described in the
-"Header Delta-Compression for HTTP/2.0" internet draft:
-http://datatracker.ietf.org/doc/draft-rpeon-httpbis-header-compression/
+"HPACK - Header Compression for HTTP/2.0" internet draft:
+http://datatracker.ietf.org/doc/draft-ietf-httpbis-header-compression/
+
+In particular, draft 03 is implemented:
+http://www.ietf.org/id/draft-ietf-httpbis-header-compression-03.txt
 
 Use of this source code is governed by a BSD-style license that can be
 found in the LICENSE file.
