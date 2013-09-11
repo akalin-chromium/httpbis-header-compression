@@ -7,7 +7,12 @@
 
 <p>Header sets equal: <span id="headerSetsEqual"></span></p>
 
-<textarea id="uncompressed" cols="40" rows="40">
+<textarea id="intermediate" cols="40" rows="20">
+</textarea>
+
+<br />
+
+<textarea id="uncompressed" cols="60" rows="20">
 :scheme: https
 :host: www.google.com
 :path: /
@@ -22,17 +27,17 @@ cache-control: max-age=0
 custom-header: custom-value
 p3p: 
 </textarea>
-<textarea id="encoderContext" cols="40" rows="40">
-</textarea>
-<textarea id="intermediate" cols="40" rows="40">
-</textarea>
-<textarea id="compressed" cols="40" rows="40">
-</textarea>
-<textarea id="decoderContext" cols="40" rows="40">
-</textarea>
-<textarea id="uncompressed2" cols="40" rows="40">
+<textarea id="uncompressed2" cols="60" rows="20">
 </textarea>
 
+<br />
+
+<textarea id="encoderContext" cols="60" rows="40">
+</textarea>
+<textarea id="decoderContext" cols="60" rows="40">
+</textarea>
+
+<br />
 
 <script>
 'use strict';
@@ -121,18 +126,16 @@ function doRoundTrip() {
     inputLength += headerSet[i][0].length;
     inputLength += headerSet[i][1].length;
   }
+  var encodedHeaderSetStr = String.fromCharCode.apply(null, encodedHeaderSet);
   var outputLength = encodedHeaderSet.length;
   var compressionRatio = inputLength / outputLength;
-
   var intermediate = {
     inputLength: inputLength,
+    output: encodedHeaderSetStr,
     outputLength: outputLength,
     compressionRatio: compressionRatio
   };
   intermediateTextarea.textContent = JSON.stringify(intermediate, null, '  ');
-
-  var encodedHeaderSetStr = String.fromCharCode.apply(null, encodedHeaderSet);
-  compressedTextarea.textContent = JSON.stringify(encodedHeaderSetStr);
 
   var deserializedHeaderSet = headerDecoder.decodeHeaderSet(encodedHeaderSet);
 
