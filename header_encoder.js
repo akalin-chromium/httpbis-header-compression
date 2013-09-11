@@ -118,18 +118,46 @@ function HeaderEncoder(direction, compressionLevel) {
 
 HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
   var encoder = new Encoder();
+  var touched = new ReferenceSet();
   for (var i = 0; i < headerSet.length; ++i) {
     var nameValuePair = headerSet[i];
     var name = nameValuePair[0];
+    var value = nameValuePair[1];
+    if (this.compressionLevel_ > 1) {
+      var nameValueIndex = this.encodingContext_.findNameAndValue(name, value);
+      if (nameValueIndex !== null) {
+        if (this.encodingContext_.hasReference(nameValueIndex)) {
+          if (touched.hasReference(nameValueIndex)) {
+            encoder.encodeIndexedHeader(nameValueIndex);
+            this.encodingContext_.processIndexedHeader(nameValueIndex);
+            encoder.encodeIndexedHeader(nameValueIndex);
+            this.encodingContext_.processIndexedHeader(nameValueIndex);
+          }
+        } else {
+          encoder.encodeIndexedHeader(nameValueIndex);
+          this.encodingContext_.processIndexedHeader(nameValueIndex);
+        }
+        touched.addReference(nameValueIndex);
+        continue;
+      }
+    }
+
     var index = null;
     if (this.compressionLevel_ > 0) {
       index = this.encodingContext_.findName(name);
     }
     var indexOrName = (index === null) ? name : index;
-    var value = nameValuePair[1];
     this.encodingContext_.processLiteralHeaderWithoutIndexing(
       indexOrName, value);
     encoder.encodeLiteralHeaderWithoutIndexing(indexOrName, value);
   }
+
+  var untouched = this.encodingContext_.getDifference(touched);
+  var self = this;
+  untouched.processReferences(function(index) {
+    encoder.encodeIndexedHeader(index);
+    self.encodingContext_.processIndexedHeader(index);
+  });
+
   return encoder.flush();
 }

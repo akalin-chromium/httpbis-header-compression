@@ -82,7 +82,8 @@ Decoder.prototype.decodeNextOpcode = function(encodingContext) {
     if (index === null) {
       return null;
     }
-    return null;
+    encodingContext.processIndexedHeader(index);
+    return undefined;
   } else if ((nextOctet >> 6) == 0x0) {
     // Literal header with substitution indexing.
     var indexPlusOneOrZero = this.decodeNextInteger(6);
@@ -136,7 +137,18 @@ HeaderDecoder.prototype.decodeHeaderSet = function(encodedHeaderSet) {
     if (result === null) {
       return null;
     }
+    if (result === undefined) {
+      continue;
+    }
     headerSet.push([ result.name, result.value ]);
   }
+  var self = this;
+  this.encodingContext_.processReferences(function(index) {
+    var result = self.encodingContext_.getIndexedHeaderNameAndValue(index);
+    if (result === null) {
+      return null;
+    }
+    headerSet.push([ result.name, result.value ]);
+  });
   return headerSet;
 };

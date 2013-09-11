@@ -95,6 +95,17 @@ HeaderTable.prototype.findName = function(name) {
   return null;
 };
 
+HeaderTable.prototype.findNameAndValue = function(name, value) {
+  for (var i = 0; i < this.entries_.length; ++i) {
+    var entry = this.entries_[i];
+    // TODO(akalin): Use constant-time string comparison.
+    if (entry.name == name && entry.value == value) {
+      return i;
+    }
+  }
+  return null;
+};
+
 HeaderTable.prototype.tryAppendEntry = function(name, value) {
   var index = -1;
   var offset = 0;
@@ -154,12 +165,28 @@ ReferenceSet.prototype.removeReference = function(index) {
   delete this.references_[index.toString(10)];
 }
 
-ReferenceSet.prototype.offsetIndices = function(offset) {
-  var newReferences = {};
+ReferenceSet.prototype.processReferences = function(fn) {
   for (var indexStr in this.references_) {
     var index = parseInt(indexStr, 10);
-    newReferences[index + offset] = 1;
+    fn(index);
   }
+}
+
+ReferenceSet.prototype.getDifference = function(other) {
+  var difference = new ReferenceSet();
+  this.processReferences(function(index) {
+    if (!other.hasReference(index)) {
+      difference.addReference(index);
+    }
+  });
+  return difference;
+}
+
+ReferenceSet.prototype.offsetIndices = function(offset) {
+  var newReferences = {};
+  this.processReferences(function(index) {
+    newReferences[index + offset] = 1;
+  });
   this.references_ = newReferences;
 }
 
@@ -177,6 +204,14 @@ function EncodingContext(direction) {
   }
 }
 
+EncodingContext.prototype.hasReference = function(index) {
+  return this.referenceSet_.hasReference(index);
+};
+
+EncodingContext.prototype.processReferences = function(fn) {
+  return this.referenceSet_.processReferences(fn);
+};
+
 EncodingContext.prototype.getIndexedHeaderName = function(index) {
   var entry = this.headerTable_.getEntry(index);
   if (entry === null) {
@@ -185,8 +220,24 @@ EncodingContext.prototype.getIndexedHeaderName = function(index) {
   return entry.name;
 }
 
+EncodingContext.prototype.getIndexedHeaderNameAndValue = function(index) {
+  var entry = this.headerTable_.getEntry(index);
+  if (entry === null) {
+    return null;
+  }
+  return { name: entry.name, value: entry.value };
+}
+
 EncodingContext.prototype.findName = function(name) {
   return this.headerTable_.findName(name);
+}
+
+EncodingContext.prototype.findNameAndValue = function(name, value) {
+  return this.headerTable_.findNameAndValue(name, value);
+}
+
+EncodingContext.prototype.getDifference = function(touched) {
+  return this.referenceSet_.getDifference(touched);
 }
 
 EncodingContext.prototype.processIndexedHeader = function(index) {
