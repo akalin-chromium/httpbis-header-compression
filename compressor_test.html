@@ -5,9 +5,7 @@
 <input id="roundTripButton" type="button" value="Round-trip" />
 <br />
 
-<p>Header sets equal: <span id="headerSetsEqual"></span></p>
-
-<textarea id="intermediate" cols="40" rows="20">
+<textarea id="intermediate" cols="124" rows="10">
 </textarea>
 
 <br />
@@ -41,8 +39,6 @@ p3p:
 
 <script>
 'use strict';
-
-var headerSetsEqualSpan = document.getElementById('headerSetsEqual');
 
 var uncompressedTextarea = document.getElementById('uncompressed');
 var encoderContextTextarea = document.getElementById('encoderContext');
@@ -114,12 +110,9 @@ function doRoundTrip() {
   var input = uncompressedTextarea.value;
   var headerSet = headerSetFromString(input);
 
-  uncompressedTextarea.value = headerSetToString(headerSet);
-
   var encodedHeaderSet = headerEncoder.encodeHeaderSet(headerSet);
 
-  encoderContextTextarea.textContent =
-    JSON.stringify(headerEncoder.encodingContext_, null, '  ');
+  var deserializedHeaderSet = headerDecoder.decodeHeaderSet(encodedHeaderSet);
 
   var inputLength = 0;
   for (var i = 0; i < headerSet.length; ++i) {
@@ -129,23 +122,25 @@ function doRoundTrip() {
   var encodedHeaderSetStr = String.fromCharCode.apply(null, encodedHeaderSet);
   var outputLength = encodedHeaderSet.length;
   var compressionRatio = inputLength / outputLength;
+  var headerSetsEqualValue = headerSetsEqual(headerSet, deserializedHeaderSet);
   var intermediate = {
     inputLength: inputLength,
     output: encodedHeaderSetStr,
     outputLength: outputLength,
-    compressionRatio: compressionRatio
+    compressionRatio: compressionRatio,
+    headerSetsEqual: headerSetsEqualValue
   };
   intermediateTextarea.textContent = JSON.stringify(intermediate, null, '  ');
 
-  var deserializedHeaderSet = headerDecoder.decodeHeaderSet(encodedHeaderSet);
+  uncompressedTextarea.value = headerSetToString(headerSet);
+
+  uncompressed2Textarea.value = headerSetToString(deserializedHeaderSet);
+
+  encoderContextTextarea.textContent =
+    JSON.stringify(headerEncoder.encodingContext_, null, '  ');
 
   decoderContextTextarea.textContent =
     JSON.stringify(headerDecoder.encodingContext_, null, '  ');
-
-  uncompressed2Textarea.textContent = headerSetToString(deserializedHeaderSet);
-
-  var doHeaderSetsEqual = headerSetsEqual(headerSet, deserializedHeaderSet);
-  headerSetsEqualSpan.textContent = (doHeaderSetsEqual ? "true" : "false");
 }
 
 roundTripButton.addEventListener('click', doRoundTrip, false);
