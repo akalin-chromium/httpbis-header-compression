@@ -268,6 +268,7 @@ function(indexOrName, value) {
   var result = this.headerTable_.tryAppendEntry(name, value);
   this.referenceSet_.offsetIndices(result.offset);
   this.referenceSet_.addReference(result.index);
+  return result;
 }
 
 EncodingContext.prototype.processLiteralHeaderWithSubstitutionIndexing =
@@ -286,4 +287,5 @@ function(indexOrName, substitutedIndex, value) {
   var result = this.headerTable_.tryReplaceEntry(substitutedIndex, name, value);
   this.referenceSet_.offsetIndices(result.offset);
   this.referenceSet_.addReference(result.index);
+  return result;
 }

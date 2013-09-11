@@ -149,22 +149,25 @@ HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
 
     if (this.compressionLevel_ > 2) {
       if (index !== null) {
-        this.encodingContext_.processLiteralHeaderWithSubstitutionIndexing(
-          index, index, value);
+        var result =
+          this.encodingContext_.processLiteralHeaderWithSubstitutionIndexing(
+            index, index, value);
         encoder.encodeLiteralHeaderWithSubstitutionIndexing(
           index, index, value);
-        touched.addReference(index);
+        touched.offsetIndices(result.offset);
+        touched.addReference(result.index);
         continue;
       }
     }
 
     if (this.compressionLevel_ > 3) {
       if (index === null) {
-        this.encodingContext_.processLiteralHeaderWithIncrementalIndexing(
-          name, value);
+        var result =
+          this.encodingContext_.processLiteralHeaderWithIncrementalIndexing(
+            name, value);
         encoder.encodeLiteralHeaderWithIncrementalIndexing(name, value);
-        index = this.encodingContext_.findName(name);
-        touched.addReference(index);
+        touched.offsetIndices(result.offset);
+        touched.addReference(result.index);
         continue;
       }
     }
