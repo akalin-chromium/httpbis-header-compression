@@ -5,7 +5,7 @@
 <input id="roundTripButton" type="button" value="Round-trip" />
 <br />
 
-<textarea id="intermediate" cols="124" rows="10">
+<textarea id="intermediate" cols="124" rows="12">
 </textarea>
 
 <br />
@@ -138,12 +138,15 @@ function doRoundTrip() {
   var outputLength = encodedHeaderSet.length;
   var compressionRatio = inputLength / outputLength;
   var headerSetsEqualValue = headerSetsEqual(headerSet, deserializedHeaderSet);
+  var contextsEqual =
+    headerEncoder.encodingContext_.equals(headerDecoder.encodingContext_);
   var intermediate = {
     inputLength: inputLength,
     output: encodedHeaderSetStr,
     outputLength: outputLength,
     compressionRatio: compressionRatio,
-    headerSetsEqual: headerSetsEqualValue
+    headerSetsEqual: headerSetsEqualValue,
+    contextsEqual: contextsEqual,
   };
   intermediateTextarea.textContent = JSON.stringify(intermediate, null, '  ');
 
