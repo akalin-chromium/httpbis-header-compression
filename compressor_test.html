@@ -24,9 +24,13 @@
   [ "p3p", "" ]
 ]
 </textarea>
+<textarea id="encoderContext" cols="40" rows="40">
+</textarea>
 <textarea id="intermediate" cols="40" rows="40">
 </textarea>
 <textarea id="compressed" cols="40" rows="40">
+</textarea>
+<textarea id="decoderContext" cols="40" rows="40">
 </textarea>
 <textarea id="uncompressed2" cols="40" rows="40">
 </textarea>
@@ -36,8 +40,10 @@
 'use strict';
 
 var uncompressedTextarea = document.getElementById('uncompressed');
+var encoderContextTextarea = document.getElementById('encoderContext');
 var intermediateTextarea = document.getElementById('intermediate');
 var compressedTextarea = document.getElementById('compressed');
+var decoderContextTextarea = document.getElementById('decoderContext');
 var uncompressed2Textarea = document.getElementById('uncompressed2');
 var roundTripButton = document.getElementById('roundTripButton');
 
@@ -48,6 +54,9 @@ function doRoundTrip() {
   var input = uncompressedTextarea.value;
   var headerSet = JSON.parse(input);
   var encodedHeaderSet = headerEncoder.encodeHeaderSet(headerSet);
+
+  encoderContextTextarea.textContent =
+    JSON.stringify(headerEncoder.encodingContext_, null, '  ');
 
   var inputLength = 0;
   for (var i = 0; i < headerSet.length; ++i) {
@@ -68,6 +77,9 @@ function doRoundTrip() {
   compressedTextarea.textContent = JSON.stringify(encodedHeaderSetStr);
 
   var deserializedHeaderSet = headerDecoder.decodeHeaderSet(encodedHeaderSet);
+
+  decoderContextTextarea.textContent =
+    JSON.stringify(headerDecoder.encodingContext_, null, '  ');
 
   uncompressed2Textarea.textContent =
     JSON.stringify(deserializedHeaderSet, null, '  ');
