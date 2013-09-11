@@ -80,6 +80,21 @@ HeaderTable.prototype.removeFirstEntry_ = function() {
   this.size_ -= firstEntry.name.length + firstEntry.value.length + 32;
 }
 
+HeaderTable.prototype.getEntry = function(index) {
+  return (index in this.entries_) ? this.entries_[index] : null;
+}
+
+HeaderTable.prototype.findName = function(name) {
+  for (var i = 0; i < this.entries_.length; ++i) {
+    var entry = this.entries_[i];
+    // TODO(akalin): Use constant-time string comparison.
+    if (entry.name == name) {
+      return i;
+    }
+  }
+  return null;
+};
+
 HeaderTable.prototype.tryAppendEntry = function(name, value) {
   var index = -1;
   var offset = 0;
@@ -160,6 +175,18 @@ function EncodingContext(direction) {
     var nameValuePair = initialHeaderTable[i];
     this.headerTable_.tryAppendEntry(nameValuePair[0], nameValuePair[1]);
   }
+}
+
+EncodingContext.prototype.getIndexedHeaderName = function(index) {
+  var entry = this.headerTable_.getEntry(index);
+  if (entry === null) {
+    return null;
+  }
+  return entry.name;
+}
+
+EncodingContext.prototype.findName = function(name) {
+  return this.headerTable_.findName(name);
 }
 
 EncodingContext.prototype.processIndexedHeader = function(index) {

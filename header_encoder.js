@@ -111,18 +111,25 @@ Encoder.prototype.flush = function() {
   return buffer;
 }
 
-function HeaderEncoder(direction) {
+function HeaderEncoder(direction, compressionLevel) {
   this.encodingContext_ = new EncodingContext(direction);
+  this.compressionLevel_ = compressionLevel;
 }
 
 HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
   var encoder = new Encoder();
   for (var i = 0; i < headerSet.length; ++i) {
     var nameValuePair = headerSet[i];
+    var name = nameValuePair[0];
+    var index = null;
+    if (this.compressionLevel_ > 0) {
+      index = this.encodingContext_.findName(name);
+    }
+    var indexOrName = (index === null) ? name : index;
+    var value = nameValuePair[1];
     this.encodingContext_.processLiteralHeaderWithoutIndexing(
-      nameValuePair[0], nameValuePair[1]);
-    encoder.encodeLiteralHeaderWithoutIndexing(
-      nameValuePair[0], nameValuePair[1]);
+      indexOrName, value);
+    encoder.encodeLiteralHeaderWithoutIndexing(indexOrName, value);
   }
   return encoder.flush();
 }

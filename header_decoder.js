@@ -71,7 +71,7 @@ Decoder.prototype.decodeNextASCIIString = function() {
   return str;
 };
 
-Decoder.prototype.decodeNextOpcode = function() {
+Decoder.prototype.decodeNextOpcode = function(encodingContext) {
   var nextOctet = this.peekNextOctet();
   if (nextOctet === null) {
     return null;
@@ -103,19 +103,22 @@ Decoder.prototype.decodeNextOpcode = function() {
     if (indexPlusOneOrZero === null) {
       return null;
     }
+    var name = null;
     if (indexPlusOneOrZero == 0) {
-      var name = this.decodeNextASCIIString();
-      if (name === null) {
-        return null;
-      }
-      var value = this.decodeNextASCIIString();
-      if (value === null) {
-        return null;
-      }
-      return { name: name, value: value };
+      name = this.decodeNextASCIIString();
     } else {
+      var index = indexPlusOneOrZero - 1;
+      name = encodingContext.getIndexedHeaderName(index);
+    }
+    if (name === null) {
       return null;
     }
+    var value = this.decodeNextASCIIString();
+    if (value === null) {
+      return null;
+    }
+    encodingContext.processLiteralHeaderWithoutIndexing(name, value);
+    return { name: name, value: value };
   } else {
     return null;
   }
@@ -129,7 +132,7 @@ HeaderDecoder.prototype.decodeHeaderSet = function(encodedHeaderSet) {
   var decoder = new Decoder(encodedHeaderSet);
   var headerSet = [];
   while (decoder.hasData()) {
-    var result = decoder.decodeNextOpcode();
+    var result = decoder.decodeNextOpcode(this.encodingContext_);
     if (result === null) {
       return null;
     }
