@@ -9,28 +9,25 @@
 
 <textarea id="uncompressed" cols="40" rows="40">
 [
-  { "key": ":host", "val": "www.google.com" },
-  { "key": ":method", "val": "GET" },
-  { "key": ":path", "val": "/" },
-  { "key": ":scheme", "val": "https" },
-  { "key": ":version", "val": "HTTP/1.1" },
-  { "key": "accept", "val": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" },
-  { "key": "accept-charset", "val": "ISO-8859-1,utf-8;q=0.7,*;q=0.3" },
-  { "key": "accept-encoding", "val": "gzip,deflate,sdch" },
-  { "key": "accept-language", "val": "en-US,en;q=0.8" },
-  { "key": "cache-control", "val": "max-age=0" },
-  { "key": "user-agent", "val": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.32 (KHTML, like Gecko) Chrome/27.0.1425.0 Safari/537.32" },
-  { "key": "custom-header", "val": "custom-value" },
-  { "key": "p3p", "val": "" }
+  [ ":host", "www.google.com" ],
+  [ ":method", "GET" ],
+  [ ":path", "/" ],
+  [ ":scheme", "https" ],
+  [ ":version", "HTTP/1.1" ],
+  [ "accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" ],
+  [ "accept-charset", "ISO-8859-1,utf-8;q=0.7,*;q=0.3" ],
+  [ "accept-encoding", "gzip,deflate,sdch" ],
+  [ "accept-language", "en-US,en;q=0.8" ],
+  [ "cache-control", "max-age=0" ],
+  [ "user-agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.32 (KHTML, like Gecko) Chrome/27.0.1425.0 Safari/537.32" ],
+  [ "custom-header", "custom-value" ],
+  [ "p3p", "" ]
 ]
 </textarea>
 <textarea id="intermediate" cols="40" rows="40">
 </textarea>
 <textarea id="compressed" cols="40" rows="40">
 </textarea>
-<textarea id="intermediate2" cols="40" rows="40">
-</textarea>
-
 <textarea id="uncompressed2" cols="40" rows="40">
 </textarea>
 
@@ -41,62 +38,39 @@
 var uncompressedTextarea = document.getElementById('uncompressed');
 var intermediateTextarea = document.getElementById('intermediate');
 var compressedTextarea = document.getElementById('compressed');
-var intermediate2Textarea = document.getElementById('intermediate2');
 var uncompressed2Textarea = document.getElementById('uncompressed2');
 var roundTripButton = document.getElementById('roundTripButton');
 
-var groupId = 0;
-
-var compressorHeaderGroups = [{}];
-var compressorKeyValueLRU = new KeyValueLRU();
-
-var decompressorHeaderGroups = [{}];
-var decompressorKeyValueLRU = new KeyValueLRU();
+var headerEncoder = new HeaderEncoder(REQUEST, 4);
+var headerDecoder = new HeaderDecoder(REQUEST);
 
 function doRoundTrip() {
   var input = uncompressedTextarea.value;
-  var headerList = JSON.parse(input);
-  var instructions =
-    headerListToInstructions(compressorHeaderGroups, compressorKeyValueLRU,
-                             groupId, headerList);
-  var serializedInstructions = serializeInstructions(instructions);
+  var headerSet = JSON.parse(input);
+  var encodedHeaderSet = headerEncoder.encodeHeaderSet(headerSet);
 
   var inputLength = 0;
-  for (var i = 0; i < headerList.length; ++i) {
-    inputLength += headerList[i].key.length;
-    inputLength += headerList[i].val.length;
+  for (var i = 0; i < headerSet.length; ++i) {
+    inputLength += headerSet[i][0].length;
+    inputLength += headerSet[i][1].length;
   }
-  var outputLength = serializedInstructions.length;
+  var outputLength = encodedHeaderSet.length;
   var compressionRatio = inputLength / outputLength;
 
   var intermediate = {
-    compressorHeaderGroups: compressorHeaderGroups,
-    compressorKeyValueLRU: compressorKeyValueLRU,
-    instructions: instructions,
     inputLength: inputLength,
     outputLength: outputLength,
     compressionRatio: compressionRatio
   };
   intermediateTextarea.textContent = JSON.stringify(intermediate, null, '  ');
 
-  compressedTextarea.textContent =
-    JSON.stringify(serializedInstructions, null, '  ');
+  var encodedHeaderSetStr = String.fromCharCode.apply(null, encodedHeaderSet);
+  compressedTextarea.textContent = JSON.stringify(encodedHeaderSetStr);
 
-  var deserializedInstructions =
-    deserializeInstructions(serializedInstructions);
+  var deserializedHeaderSet = headerDecoder.decodeHeaderSet(encodedHeaderSet);
 
-  var intermediate2 = {
-    decompressorHeaderGroups: decompressorHeaderGroups,
-    decompressorKeyValueLRU: decompressorKeyValueLRU,
-    deserializedInstructions: deserializedInstructions,
-  };
-  var deserializedHeaderList =
-    instructionsToHeaderList(decompressorHeaderGroups, decompressorKeyValueLRU,
-                             groupId, deserializedInstructions);
-
-  intermediate2Textarea.textContent = JSON.stringify(intermediate2, null, '  ');
   uncompressed2Textarea.textContent =
-    JSON.stringify(deserializedHeaderList, null, '  ');
+    JSON.stringify(deserializedHeaderSet, null, '  ');
 }
 
 roundTripButton.addEventListener('click', doRoundTrip, false);
