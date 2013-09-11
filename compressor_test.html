@@ -127,7 +127,10 @@ function doRoundTrip() {
 
   var encodedHeaderSet = headerEncoder.encodeHeaderSet(headerSet);
 
-  var deserializedHeaderSet = headerDecoder.decodeHeaderSet(encodedHeaderSet);
+  var deserializedHeaderSet = [];
+  headerDecoder.decodeHeaderSet(encodedHeaderSet, function(name, value) {
+    deserializedHeaderSet.push([ name, value ]);
+  });
 
   var inputLength = 0;
   for (var i = 0; i < headerSet.length; ++i) {
