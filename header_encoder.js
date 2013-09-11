@@ -146,6 +146,18 @@ HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
     if (this.compressionLevel_ > 0) {
       index = this.encodingContext_.findName(name);
     }
+
+    if (this.compressionLevel_ > 2) {
+      if (index !== null) {
+        this.encodingContext_.processLiteralHeaderWithSubstitutionIndexing(
+          index, index, value);
+        encoder.encodeLiteralHeaderWithSubstitutionIndexing(
+          index, index, value);
+        touched.addReference(index);
+        continue;
+      }
+    }
+
     var indexOrName = (index === null) ? name : index;
     this.encodingContext_.processLiteralHeaderWithoutIndexing(
       indexOrName, value);

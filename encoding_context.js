@@ -257,7 +257,8 @@ function(indexOrName, value) {
   var name;
   switch (typeof indexOrName) {
     case 'number':
-      name = this.headerTable_.getEntryName(indexOrName);
+      var entry = this.headerTable_.getEntry(indexOrName);
+      name = entry.name;
       break;
 
     case 'string':
@@ -274,7 +275,8 @@ function(indexOrName, substitutedIndex, value) {
   var name;
   switch (typeof indexOrName) {
     case 'number':
-      name = this.headerTable_.getEntryName(indexOrName);
+      var entry = this.headerTable_.getEntry(indexOrName);
+      name = entry.name;
       break;
 
     case 'string':

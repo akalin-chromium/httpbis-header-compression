@@ -90,7 +90,25 @@ Decoder.prototype.decodeNextOpcode = function(encodingContext) {
     if (indexPlusOneOrZero === null) {
       return null;
     }
-    return null;
+    var indexOrName = null;
+    if (indexPlusOneOrZero == 0) {
+      indexOrName = this.decodeNextASCIIString();
+    } else {
+      indexOrName = indexPlusOneOrZero - 1;
+    }
+    if (indexOrName === null) {
+      return null;
+    }
+    var substitutedIndex = this.decodeNextInteger(0);
+    if (substitutedIndex === null) {
+      return null;
+    }
+    var value = this.decodeNextASCIIString();
+    if (value === null) {
+      return null;
+    }
+    encodingContext.processLiteralHeaderWithSubstitutionIndexing(
+      indexOrName, substitutedIndex, value);
   } else if ((nextOctet >> 5) == 0x1) {
     // Literal header with incremental indexing.
     var indexPlusOneOrZero = this.decodeNextInteger(5);
