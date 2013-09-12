@@ -137,12 +137,11 @@ HeaderDecoder.prototype.decodeHeaderSet = function(
   while (decoder.hasData()) {
     decoder.processNextOpcode(this.encodingContext_, emitFunction);
   }
-  var self = this;
   this.encodingContext_.forEachEntry(
     function(index, name, value, referenced, touchCount) {
       if (referenced && (touchCount === null)) {
         emitFunction(name, value);
       }
-      self.encodingContext_.clearTouches(index);
-    });
+      this.encodingContext_.clearTouches(index);
+    }.bind(this));
 };

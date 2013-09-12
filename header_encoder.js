@@ -196,15 +196,14 @@ HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
     encoder.encodeLiteralHeaderWithoutIndexing(indexOrName, value);
   }
 
-  var self = this;
   this.encodingContext_.forEachEntry(
     function(index, name, value, referenced, touchCount) {
       if (referenced && (touchCount === null)) {
         encoder.encodeIndexedHeader(index);
-        self.encodingContext_.processIndexedHeader(index);
+        this.encodingContext_.processIndexedHeader(index);
       }
-      self.encodingContext_.clearTouches(index);
-    });
+      this.encodingContext_.clearTouches(index);
+    }.bind(this));
 
   return encoder.flush();
 }
