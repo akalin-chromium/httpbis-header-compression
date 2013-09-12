@@ -11,16 +11,13 @@ Decoder.prototype.hasData = function() {
 
 Decoder.prototype.peekNextOctet = function() {
   if (!this.hasData()) {
-    return null;
+    throw new Error('Unexpected end of buffer');
   }
   return this.buffer_[this.i_] & 0xff;
 };
 
 Decoder.prototype.decodeNextOctet = function() {
   var nextOctet = this.peekNextOctet();
-  if (nextOctet === null) {
-    return null;
-  }
   ++this.i_;
   return nextOctet;
 };
@@ -33,18 +30,12 @@ Decoder.prototype.decodeNextInteger = function(N) {
   if (N > 0) {
     var nextMarker = (1 << N) - 1;
     var nextOctet = this.decodeNextOctet();
-    if (nextOctet === null) {
-      return null;
-    }
     I = nextOctet & nextMarker;
     hasMore = (I == nextMarker);
   }
 
   while (hasMore) {
     var nextOctet = this.decodeNextOctet();
-    if (nextOctet === null) {
-      return null;
-    }
     // Check the high bit. (Remember that / in JavaScript is
     // floating-point division).
     hasMore = ((nextOctet & 0x80) != 0);
@@ -57,15 +48,9 @@ Decoder.prototype.decodeNextInteger = function(N) {
 
 Decoder.prototype.decodeNextASCIIString = function() {
   var length = this.decodeNextInteger(0);
-  if (length === null) {
-    return null;
-  }
   var str = '';
   for (var i = 0; i < length; ++i) {
     var nextOctet = this.decodeNextOctet();
-    if (nextOctet === null) {
-      return null;
-    }
     str += String.fromCharCode(nextOctet);
   }
   return str;
@@ -73,52 +58,43 @@ Decoder.prototype.decodeNextASCIIString = function() {
 
 Decoder.prototype.decodeNextName = function(N, encodingContext) {
   var indexPlusOneOrZero = this.decodeNextInteger(N);
-  if (indexPlusOneOrZero === null) {
-    return null;
-  }
   var name = null;
   if (indexPlusOneOrZero == 0) {
     name = this.decodeNextASCIIString();
   } else {
     var index = indexPlusOneOrZero - 1;
     name = encodingContext.getIndexedHeaderName(index);
+    if (name === null) {
+      throw new Error('Invalid index ' + index);
+    }
   }
   return name;
 };
 
 Decoder.prototype.decodeNextOpcode = function(encodingContext, emitFunction) {
   var nextOctet = this.peekNextOctet();
-  if (nextOctet === null) {
-    return null;
-  }
+
   if ((nextOctet >> 7) == 0x1) {
     // Indexed header.
     var index = this.decodeNextInteger(7);
-    if (index === null) {
-      return null;
-    }
     encodingContext.processIndexedHeader(index);
     if (!encodingContext.isReferenced(index)) {
-      return 1;
+      return;
     }
     encodingContext.addTouches(index, 0);
     var result = encodingContext.getIndexedHeaderNameAndValue(index);
+    if (result === null) {
+      throw new Error('Invalid index ' + index);
+    }
     emitFunction(result.name, result.value);
-    return 1;
-  } else if ((nextOctet >> 6) == 0x0) {
+    return;
+  }
+
+  if ((nextOctet >> 6) == 0x0) {
     // Literal header with substitution indexing.
     var name = this.decodeNextName(6, encodingContext);
-    if (name === null) {
-      return null;
-    }
     var substitutedIndex = this.decodeNextInteger(0);
-    if (substitutedIndex === null) {
-      return null;
-    }
     var value = this.decodeNextASCIIString();
-    if (value === null) {
-      return null;
-    }
     var index =
       encodingContext.processLiteralHeaderWithSubstitutionIndexing(
         name, substitutedIndex, value);
@@ -126,39 +102,31 @@ Decoder.prototype.decodeNextOpcode = function(encodingContext, emitFunction) {
       encodingContext.addTouches(index, 0);
     }
     emitFunction(name, value);
-    return 1;
-  } else if ((nextOctet >> 5) == 0x2) {
+    return;
+  }
+
+  if ((nextOctet >> 5) == 0x2) {
     // Literal header with incremental indexing.
     var name = this.decodeNextName(5, encodingContext);
-    if (name === null) {
-      return null;
-    }
     var value = this.decodeNextASCIIString();
-    if (value === null) {
-      return null;
-    }
     var index = encodingContext.processLiteralHeaderWithIncrementalIndexing(
       name, value);
     if (index >= 0) {
       encodingContext.addTouches(index, 0);
     }
     emitFunction(name, value);
-    return 1;
-  } else if ((nextOctet >> 5) == 0x3) {
+    return;
+  }
+
+  if ((nextOctet >> 5) == 0x3) {
     // Literal header without indexing.
     var name = this.decodeNextName(5, encodingContext);
-    if (name === null) {
-      return null;
-    }
     var value = this.decodeNextASCIIString();
-    if (value === null) {
-      return null;
-    }
     emitFunction(name, value);
-    return 1;
-  } else {
-    return null;
+    return;
   }
+
+  throw new Error('Could not decode opcode from ' + nextOctet);
 };
 
 function HeaderDecoder(direction) {
@@ -173,10 +141,7 @@ HeaderDecoder.prototype.decodeHeaderSet = function(
   encodedHeaderSet, emitFunction) {
   var decoder = new Decoder(encodedHeaderSet);
   while (decoder.hasData()) {
-    var result = decoder.decodeNextOpcode(this.encodingContext_, emitFunction);
-    if (result === null) {
-      return null;
-    }
+    decoder.decodeNextOpcode(this.encodingContext_, emitFunction);
   }
   var self = this;
   this.encodingContext_.forEachEntry(

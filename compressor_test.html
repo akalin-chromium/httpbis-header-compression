@@ -137,12 +137,24 @@ function doRoundTrip() {
   var input = uncompressedTextarea.value;
   var headerSet = headerSetFromString(input);
 
-  var encodedHeaderSet = headerEncoder.encodeHeaderSet(headerSet);
-
+  var encodedHeaderSet = [];
   var deserializedHeaderSet = [];
-  headerDecoder.decodeHeaderSet(encodedHeaderSet, function(name, value) {
-    deserializedHeaderSet.push([ name, value ]);
-  });
+
+  var error = null;
+
+  try {
+    encodedHeaderSet = headerEncoder.encodeHeaderSet(headerSet);
+
+    headerDecoder.decodeHeaderSet(encodedHeaderSet, function(name, value) {
+      deserializedHeaderSet.push([ name, value ]);
+    });
+  } catch (e) {
+    error = {
+      name: e.name,
+      message: e.message,
+      stack: e.stack
+    };
+  }
 
   var inputLength = 0;
   for (var i = 0; i < headerSet.length; ++i) {
@@ -162,6 +174,7 @@ function doRoundTrip() {
     compressionRatio: compressionRatio,
     headerSetsEqual: headerSetsEqualValue,
     contextsEqual: contextsEqual,
+    error: error
   };
   intermediateTextarea.textContent = JSON.stringify(intermediate, null, '  ');
 
