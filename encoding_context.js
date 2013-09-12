@@ -294,10 +294,9 @@ EncodingContext.prototype.forEachEntry = function(fn) {
 EncodingContext.prototype.processIndexedHeader = function(index) {
   if (this.headerTable_.isReferenced(index)) {
     this.headerTable_.unsetReferenced(index);
-    return false;
+  } else {
+    this.headerTable_.setReferenced(index);
   }
-  this.headerTable_.setReferenced(index);
-  return true;
 }
 
 EncodingContext.prototype.processLiteralHeaderWithIncrementalIndexing =

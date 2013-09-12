@@ -97,7 +97,8 @@ Decoder.prototype.decodeNextOpcode = function(encodingContext, emitFunction) {
     if (index === null) {
       return null;
     }
-    if (!encodingContext.processIndexedHeader(index)) {
+    encodingContext.processIndexedHeader(index);
+    if (!encodingContext.isReferenced(index)) {
       return 1;
     }
     encodingContext.addTouches(index, 0);
