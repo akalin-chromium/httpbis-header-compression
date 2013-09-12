@@ -134,6 +134,39 @@ HeaderTable.prototype.findNameAndValue = function(name, value) {
   return null;
 };
 
+HeaderTable.prototype.hasReference = function(index) {
+  var entry = this.getEntry(index);
+  if (entry === null) {
+    return null;
+  }
+  return 'refCount' in entry;
+};
+
+HeaderTable.prototype.addReference = function(index) {
+  var entry = this.getEntry(index);
+  if (entry === null) {
+    return null;
+  }
+  entry.refCount = 1;
+};
+
+HeaderTable.prototype.removeReference = function(index) {
+  var entry = this.getEntry(index);
+  if (entry === null) {
+    return null;
+  }
+  delete entry.refCount;
+};
+
+HeaderTable.prototype.processDifference = function(touched, fn) {
+  for (var i = 0; i < this.entries_.length; ++i) {
+    if (this.hasReference(i) && !touched.hasReference(i)) {
+      var entry = this.entries_[i];
+      fn(i, entry.name, entry.value);
+    }
+  }
+}
+
 HeaderTable.prototype.tryAppendEntry = function(name, value) {
   var index = -1;
   var offset = 0;
@@ -248,7 +281,6 @@ ReferenceSet.prototype.offsetIndices = function(offset) {
 
 function EncodingContext(direction) {
   this.headerTable_ = new HeaderTable();
-  this.referenceSet_ = new ReferenceSet();
 
   var initialHeaderTable =
     (direction == REQUEST) ?
@@ -261,17 +293,15 @@ function EncodingContext(direction) {
 }
 
 EncodingContext.prototype.setHeaderTableMaxSize = function(maxSize) {
-  var offset = this.headerTable_.setMaxSize(maxSize);
-  this.referenceSet_.offsetIndices(offset);
+  this.headerTable_.setMaxSize(maxSize);
 };
 
 EncodingContext.prototype.equals = function(other) {
-  return this.headerTable_.equals(other.headerTable_) &&
-    this.referenceSet_.equals(other.referenceSet_);
+  return this.headerTable_.equals(other.headerTable_);
 };
 
 EncodingContext.prototype.hasReference = function(index) {
-  return this.referenceSet_.hasReference(index);
+  return this.headerTable_.hasReference(index);
 };
 
 EncodingContext.prototype.getIndexedHeaderName = function(index) {
@@ -298,25 +328,24 @@ EncodingContext.prototype.findNameAndValue = function(name, value) {
   return this.headerTable_.findNameAndValue(name, value);
 }
 
-EncodingContext.prototype.getDifference = function(touched) {
-  return this.referenceSet_.getDifference(touched);
+EncodingContext.prototype.processDifference = function(touched, fn) {
+  return this.headerTable_.processDifference(touched, fn);
 }
 
 EncodingContext.prototype.processIndexedHeader = function(index) {
-  if (this.referenceSet_.hasReference(index)) {
-    this.referenceSet_.removeReference(index);
+  if (this.headerTable_.hasReference(index)) {
+    this.headerTable_.removeReference(index);
     return false;
   }
-  this.referenceSet_.addReference(index);
+  this.headerTable_.addReference(index);
   return true;
 }
 
 EncodingContext.prototype.processLiteralHeaderWithIncrementalIndexing =
 function(name, value) {
   var result = this.headerTable_.tryAppendEntry(name, value);
-  this.referenceSet_.offsetIndices(result.offset);
   if (result.index >= 0) {
-    this.referenceSet_.addReference(result.index);
+    this.headerTable_.addReference(result.index);
   }
   return result;
 }
@@ -324,9 +353,8 @@ function(name, value) {
 EncodingContext.prototype.processLiteralHeaderWithSubstitutionIndexing =
 function(name, substitutedIndex, value) {
   var result = this.headerTable_.tryReplaceEntry(substitutedIndex, name, value);
-  this.referenceSet_.offsetIndices(result.offset);
   if (result.index >= 0) {
-    this.referenceSet_.addReference(result.index);
+    this.headerTable_.addReference(result.index);
   }
   return result;
 }
