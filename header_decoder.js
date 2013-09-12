@@ -1,8 +1,9 @@
 'use strict';
 
-function Decoder(buffer) {
+function Decoder(buffer, encodingContext) {
   this.buffer_ = buffer;
   this.i_ = 0;
+  this.encodingContext_ = encodingContext;
 }
 
 Decoder.prototype.hasData = function() {
@@ -56,44 +57,44 @@ Decoder.prototype.decodeNextASCIIString = function() {
   return str;
 };
 
-Decoder.prototype.decodeNextName = function(N, encodingContext) {
+Decoder.prototype.decodeNextName = function(N) {
   var indexPlusOneOrZero = this.decodeNextInteger(N);
   var name = null;
   if (indexPlusOneOrZero == 0) {
     name = this.decodeNextASCIIString();
   } else {
     var index = indexPlusOneOrZero - 1;
-    name = encodingContext.getIndexedHeaderName(index);
+    name = this.encodingContext_.getIndexedHeaderName(index);
   }
   return name;
 };
 
-Decoder.prototype.processNextOpcode = function(encodingContext, emitFunction) {
+Decoder.prototype.processNextOpcode = function(emitFunction) {
   var nextOctet = this.peekNextOctet();
 
   if ((nextOctet >> 7) == 0x1) {
     // Indexed header.
     var index = this.decodeNextInteger(7);
-    encodingContext.processIndexedHeader(index);
-    if (!encodingContext.isReferenced(index)) {
+    this.encodingContext_.processIndexedHeader(index);
+    if (!this.encodingContext_.isReferenced(index)) {
       return;
     }
-    encodingContext.addTouches(index, 0);
-    var result = encodingContext.getIndexedHeaderNameAndValue(index);
+    this.encodingContext_.addTouches(index, 0);
+    var result = this.encodingContext_.getIndexedHeaderNameAndValue(index);
     emitFunction(result.name, result.value);
     return;
   }
 
   if ((nextOctet >> 6) == 0x0) {
     // Literal header with substitution indexing.
-    var name = this.decodeNextName(6, encodingContext);
+    var name = this.decodeNextName(6);
     var substitutedIndex = this.decodeNextInteger(0);
     var value = this.decodeNextASCIIString();
     var index =
-      encodingContext.processLiteralHeaderWithSubstitutionIndexing(
+      this.encodingContext_.processLiteralHeaderWithSubstitutionIndexing(
         name, substitutedIndex, value);
     if (index >= 0) {
-      encodingContext.addTouches(index, 0);
+      this.encodingContext_.addTouches(index, 0);
     }
     emitFunction(name, value);
     return;
@@ -101,12 +102,13 @@ Decoder.prototype.processNextOpcode = function(encodingContext, emitFunction) {
 
   if ((nextOctet >> 5) == 0x2) {
     // Literal header with incremental indexing.
-    var name = this.decodeNextName(5, encodingContext);
+    var name = this.decodeNextName(5);
     var value = this.decodeNextASCIIString();
-    var index = encodingContext.processLiteralHeaderWithIncrementalIndexing(
-      name, value);
+    var index =
+      this.encodingContext_.processLiteralHeaderWithIncrementalIndexing(
+        name, value);
     if (index >= 0) {
-      encodingContext.addTouches(index, 0);
+      this.encodingContext_.addTouches(index, 0);
     }
     emitFunction(name, value);
     return;
@@ -114,7 +116,7 @@ Decoder.prototype.processNextOpcode = function(encodingContext, emitFunction) {
 
   if ((nextOctet >> 5) == 0x3) {
     // Literal header without indexing.
-    var name = this.decodeNextName(5, encodingContext);
+    var name = this.decodeNextName(5);
     var value = this.decodeNextASCIIString();
     emitFunction(name, value);
     return;
@@ -133,9 +135,9 @@ HeaderDecoder.prototype.setHeaderTableMaxSize = function(maxSize) {
 
 HeaderDecoder.prototype.decodeHeaderSet = function(
   encodedHeaderSet, emitFunction) {
-  var decoder = new Decoder(encodedHeaderSet);
+  var decoder = new Decoder(encodedHeaderSet, this.encodingContext_);
   while (decoder.hasData()) {
-    decoder.processNextOpcode(this.encodingContext_, emitFunction);
+    decoder.processNextOpcode(emitFunction);
   }
   this.encodingContext_.forEachEntry(
     function(index, name, value, referenced, touchCount) {
