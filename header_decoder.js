@@ -77,7 +77,7 @@ Decoder.prototype.processNextHeaderRepresentation = function() {
   var nextOctet = this.peekNextOctet();
 
   if ((nextOctet >> 7) == 0x1) {
-    // Indexed header.
+    // Indexed header (4.2).
     var index = this.decodeNextInteger(7);
     this.encodingContext_.processIndexedHeader(index);
     if (!this.encodingContext_.isReferenced(index)) {
@@ -89,23 +89,16 @@ Decoder.prototype.processNextHeaderRepresentation = function() {
     return;
   }
 
-  if ((nextOctet >> 6) == 0x0) {
-    // Literal header with substitution indexing.
-    var name = this.decodeNextName(6);
-    var substitutedIndex = this.decodeNextInteger(0);
+  if ((nextOctet >> 5) == 0x3) {
+    // Literal header without indexing (4.3.1).
+    var name = this.decodeNextName(5);
     var value = this.decodeNextASCIIString();
-    var index =
-      this.encodingContext_.processLiteralHeaderWithSubstitutionIndexing(
-        name, substitutedIndex, value);
-    if (index >= 0) {
-      this.encodingContext_.addTouches(index, 0);
-    }
     this.emitFunction_(name, value);
     return;
   }
 
   if ((nextOctet >> 5) == 0x2) {
-    // Literal header with incremental indexing.
+    // Literal header with incremental indexing (4.3.2).
     var name = this.decodeNextName(5);
     var value = this.decodeNextASCIIString();
     var index =
@@ -118,10 +111,17 @@ Decoder.prototype.processNextHeaderRepresentation = function() {
     return;
   }
 
-  if ((nextOctet >> 5) == 0x3) {
-    // Literal header without indexing.
-    var name = this.decodeNextName(5);
+  if ((nextOctet >> 6) == 0x0) {
+    // Literal header with substitution indexing (4.3.3).
+    var name = this.decodeNextName(6);
+    var substitutedIndex = this.decodeNextInteger(0);
     var value = this.decodeNextASCIIString();
+    var index =
+      this.encodingContext_.processLiteralHeaderWithSubstitutionIndexing(
+        name, substitutedIndex, value);
+    if (index >= 0) {
+      this.encodingContext_.addTouches(index, 0);
+    }
     this.emitFunction_(name, value);
     return;
   }
