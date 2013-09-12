@@ -162,7 +162,7 @@ HeaderTable.prototype.unsetReferenced = function(index) {
 HeaderTable.prototype.forEachEntry = function(fn) {
   for (var i = 0; i < this.entries_.length; ++i) {
     var entry = this.entries_[i];
-    fn(i, entry.name, entry.value);
+    fn(i, entry.name, entry.value, 'referenced' in entry);
   }
 }
 

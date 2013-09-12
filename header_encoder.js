@@ -199,9 +199,8 @@ HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
   }
 
   var self = this;
-  this.encodingContext_.forEachEntry(function(index, name, value) {
-    if (self.encodingContext_.isReferenced(index) &&
-        !emitted.hasReference(index)) {
+  this.encodingContext_.forEachEntry(function(index, name, value, referenced) {
+    if (referenced && !emitted.hasReference(index)) {
       encoder.encodeIndexedHeader(index);
       self.encodingContext_.processIndexedHeader(index);
     }
