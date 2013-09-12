@@ -80,6 +80,16 @@ HeaderTable.prototype.removeFirstEntry_ = function() {
   this.size_ -= firstEntry.name.length + firstEntry.value.length + 32;
 }
 
+HeaderTable.prototype.setMaxSize = function(maxSize) {
+  this.maxSize_ = maxSize;
+  var offset = 0;
+  while (this.size_ > this.maxSize_) {
+    this.removeFirstEntry_();
+    --offset;
+  }
+  return offset;
+};
+
 HeaderTable.prototype.equals = function(other) {
   if (this.size_ != other.size_ || this.maxSize_ != other.maxSize_ ||
       this.entries_.length != other.entries_.length) {
@@ -246,6 +256,11 @@ function EncodingContext(direction) {
     this.headerTable_.tryAppendEntry(nameValuePair[0], nameValuePair[1]);
   }
 }
+
+EncodingContext.prototype.setHeaderTableMaxSize = function(maxSize) {
+  var offset = this.headerTable_.setMaxSize(maxSize);
+  this.referenceSet_.offsetIndices(offset);
+};
 
 EncodingContext.prototype.equals = function(other) {
   return this.headerTable_.equals(other.headerTable_) &&

@@ -3,6 +3,13 @@
 <script src="header_decoder.js"></script>
 
 <input id="roundTripButton" type="button" value="Round-trip" />
+
+<br />
+
+<input id="headerTableMaxSizeInput" type="number" min="0" value="4096" />
+<input id="changeHeaderTableMaxSizeButton" type="button"
+       value="Change header table max size" />
+
 <br />
 
 <textarea id="intermediate" cols="124" rows="12">
@@ -40,13 +47,18 @@ user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.32 (KHTML, like Geck
 <script>
 'use strict';
 
+var roundTripButton = document.getElementById('roundTripButton');
+var headerTableMaxSizeInput =
+  document.getElementById('headerTableMaxSizeInput');
+var changeHeaderTableMaxSizeButton =
+  document.getElementById('changeHeaderTableMaxSizeButton');
+
 var uncompressedTextarea = document.getElementById('uncompressed');
 var encoderContextTextarea = document.getElementById('encoderContext');
 var intermediateTextarea = document.getElementById('intermediate');
 var compressedTextarea = document.getElementById('compressed');
 var decoderContextTextarea = document.getElementById('decoderContext');
 var uncompressed2Textarea = document.getElementById('uncompressed2');
-var roundTripButton = document.getElementById('roundTripButton');
 
 var headerEncoder = new HeaderEncoder(REQUEST, 4);
 var headerDecoder = new HeaderDecoder(REQUEST);
@@ -164,5 +176,28 @@ function doRoundTrip() {
     JSON.stringify(headerDecoder.encodingContext_, null, '  ');
 }
 
+function doChangeHeaderTableMaxSize() {
+  var headerTableMaxSize = parseInt(headerTableMaxSizeInput.value, 10);
+  if (isNaN(headerTableMaxSize)) {
+    headerTableMaxSize = 4096;
+  }
+  headerTableMaxSize = Math.max(0, headerTableMaxSize);
+  headerTableMaxSize = Math.min(1024 * 1024, headerTableMaxSize);
+  headerTableMaxSize = Math.floor(headerTableMaxSize);
+
+  headerEncoder.setHeaderTableMaxSize(headerTableMaxSize);
+  headerDecoder.setHeaderTableMaxSize(headerTableMaxSize);
+  headerTableMaxSizeInput.value = headerTableMaxSize;
+
+  encoderContextTextarea.textContent =
+    JSON.stringify(headerEncoder.encodingContext_, null, '  ');
+
+  decoderContextTextarea.textContent =
+    JSON.stringify(headerDecoder.encodingContext_, null, '  ');
+}
+
 roundTripButton.addEventListener('click', doRoundTrip, false);
+
+changeHeaderTableMaxSizeButton.addEventListener(
+  'click', doChangeHeaderTableMaxSize, false);
 </script>

@@ -116,6 +116,10 @@ function HeaderEncoder(direction, compressionLevel) {
   this.compressionLevel_ = compressionLevel;
 }
 
+HeaderEncoder.prototype.setHeaderTableMaxSize = function(maxSize) {
+  this.encodingContext_.setHeaderTableMaxSize(maxSize);
+};
+
 HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
   var encoder = new Encoder();
   var emitted = new ReferenceSet();

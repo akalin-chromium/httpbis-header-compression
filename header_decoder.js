@@ -179,6 +179,10 @@ function HeaderDecoder(direction) {
   this.encodingContext_ = new EncodingContext(direction);
 }
 
+HeaderDecoder.prototype.setHeaderTableMaxSize = function(maxSize) {
+  this.encodingContext_.setHeaderTableMaxSize(maxSize);
+};
+
 HeaderDecoder.prototype.decodeHeaderSet = function(
   encodedHeaderSet, emitFunction) {
   var decoder = new Decoder(encodedHeaderSet);
