@@ -171,7 +171,6 @@ Decoder.prototype.decodeNextOpcode = function(
     if (value === null) {
       return null;
     }
-    encodingContext.processLiteralHeaderWithoutIndexing(name, value);
     emitFunction(name, value);
     return 1;
   } else {

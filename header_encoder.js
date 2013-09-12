@@ -194,8 +194,6 @@ HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
       }
     }
 
-    this.encodingContext_.processLiteralHeaderWithoutIndexing(
-      name, value);
     var indexOrName = (index === null) ? name : index;
     encoder.encodeLiteralHeaderWithoutIndexing(indexOrName, value);
   }

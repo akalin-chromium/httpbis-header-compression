@@ -311,10 +311,6 @@ EncodingContext.prototype.processIndexedHeader = function(index) {
   return true;
 }
 
-EncodingContext.prototype.processLiteralHeaderWithoutIndexing = function(
-  name, value) {
-}
-
 EncodingContext.prototype.processLiteralHeaderWithIncrementalIndexing =
 function(name, value) {
   var result = this.headerTable_.tryAppendEntry(name, value);
