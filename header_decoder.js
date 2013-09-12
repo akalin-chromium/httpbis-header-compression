@@ -86,8 +86,7 @@ Decoder.prototype.decodeNextName = function(N, encodingContext) {
   return name;
 };
 
-Decoder.prototype.decodeNextOpcode = function(
-  encodingContext, touched, emitFunction) {
+Decoder.prototype.decodeNextOpcode = function(encodingContext, emitFunction) {
   var nextOctet = this.peekNextOctet();
   if (nextOctet === null) {
     return null;
@@ -101,7 +100,7 @@ Decoder.prototype.decodeNextOpcode = function(
     if (!encodingContext.processIndexedHeader(index)) {
       return 1;
     }
-    touched.addReference(index);
+    encodingContext.addTouches(index, 0);
     var result = encodingContext.getIndexedHeaderNameAndValue(index);
     emitFunction(result.name, result.value);
     return 1;
@@ -122,9 +121,8 @@ Decoder.prototype.decodeNextOpcode = function(
     var result =
       encodingContext.processLiteralHeaderWithSubstitutionIndexing(
         name, substitutedIndex, value);
-    touched.offsetIndices(result.offset);
     if (result.index >= 0) {
-      touched.addReference(result.index);
+      encodingContext.addTouches(result.index, 0);
     }
     emitFunction(name, value);
     return 1;
@@ -140,9 +138,8 @@ Decoder.prototype.decodeNextOpcode = function(
     }
     var result = encodingContext.processLiteralHeaderWithIncrementalIndexing(
       name, value);
-    touched.offsetIndices(result.offset);
     if (result.index >= 0) {
-      touched.addReference(result.index);
+      encodingContext.addTouches(result.index, 0);
     }
     emitFunction(name, value);
     return 1;
@@ -174,18 +171,20 @@ HeaderDecoder.prototype.setHeaderTableMaxSize = function(maxSize) {
 HeaderDecoder.prototype.decodeHeaderSet = function(
   encodedHeaderSet, emitFunction) {
   var decoder = new Decoder(encodedHeaderSet);
-  var touched = new ReferenceSet();
   while (decoder.hasData()) {
-    var result =
-      decoder.decodeNextOpcode(this.encodingContext_, touched, emitFunction);
+    var result = decoder.decodeNextOpcode(this.encodingContext_, emitFunction);
     if (result === null) {
       return null;
     }
   }
   var self = this;
   this.encodingContext_.forEachEntry(function(index, name, value, referenced) {
-    if (referenced && !touched.hasReference(index)) {
-      emitFunction(name, value);
+    if (referenced) {
+      if (self.encodingContext_.getTouchCount(index) !== null) {
+        self.encodingContext_.clearTouches(index);
+      } else {
+        emitFunction(name, value);
+      }
     }
   });
 };

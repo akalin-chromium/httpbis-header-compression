@@ -159,6 +159,31 @@ HeaderTable.prototype.unsetReferenced = function(index) {
   delete entry.referenced;
 };
 
+HeaderTable.prototype.getTouchCount = function(index) {
+  var entry = this.getEntry(index);
+  if (entry === null) {
+    return null;
+  }
+  return ('touchCount' in entry) ? entry.touchCount : null;
+};
+
+HeaderTable.prototype.addTouches = function(index, touchCount) {
+  var entry = this.getEntry(index);
+  if (entry === null) {
+    return null;
+  }
+  entry.touchCount = entry.touchCount || 0;
+  entry.touchCount += touchCount;
+};
+
+HeaderTable.prototype.clearTouches = function(index) {
+  var entry = this.getEntry(index);
+  if (entry === null) {
+    return null;
+  }
+  delete entry.touchCount;
+};
+
 HeaderTable.prototype.forEachEntry = function(fn) {
   for (var i = 0; i < this.entries_.length; ++i) {
     var entry = this.entries_[i];
@@ -301,6 +326,18 @@ EncodingContext.prototype.equals = function(other) {
 
 EncodingContext.prototype.isReferenced = function(index) {
   return this.headerTable_.isReferenced(index);
+};
+
+EncodingContext.prototype.getTouchCount = function(index) {
+  return this.headerTable_.getTouchCount(index);
+};
+
+EncodingContext.prototype.addTouches = function(index, touchCount) {
+  return this.headerTable_.addTouches(index, touchCount);
+};
+
+EncodingContext.prototype.clearTouches = function(index) {
+  return this.headerTable_.clearTouches(index);
 };
 
 EncodingContext.prototype.getIndexedHeaderName = function(index) {
