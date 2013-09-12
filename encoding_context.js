@@ -158,12 +158,10 @@ HeaderTable.prototype.removeReference = function(index) {
   delete entry.refCount;
 };
 
-HeaderTable.prototype.processDifference = function(touched, fn) {
+HeaderTable.prototype.forEachEntry = function(fn) {
   for (var i = 0; i < this.entries_.length; ++i) {
-    if (this.hasReference(i) && !touched.hasReference(i)) {
-      var entry = this.entries_[i];
-      fn(i, entry.name, entry.value);
-    }
+    var entry = this.entries_[i];
+    fn(i, entry.name, entry.value);
   }
 }
 
@@ -328,8 +326,8 @@ EncodingContext.prototype.findNameAndValue = function(name, value) {
   return this.headerTable_.findNameAndValue(name, value);
 }
 
-EncodingContext.prototype.processDifference = function(touched, fn) {
-  return this.headerTable_.processDifference(touched, fn);
+EncodingContext.prototype.forEachEntry = function(fn) {
+  return this.headerTable_.forEachEntry(fn);
 }
 
 EncodingContext.prototype.processIndexedHeader = function(index) {

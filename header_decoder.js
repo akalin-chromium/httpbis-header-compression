@@ -183,8 +183,10 @@ HeaderDecoder.prototype.decodeHeaderSet = function(
     }
   }
   var self = this;
-  this.encodingContext_.processDifference(
-    touched, function(index, name, value) {
+  this.encodingContext_.forEachEntry(function(index, name, value) {
+    if (self.encodingContext_.hasReference(index) &&
+        !touched.hasReference(index)) {
       emitFunction(name, value);
-    });
+    }
+  });
 };
