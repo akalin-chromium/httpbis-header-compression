@@ -10,18 +10,18 @@ Encoder.prototype.encodeOctet = function(o) {
 
 // Encodes an integer I into the representation described in 4.1.1. N
 // is the number of bits of the prefix as described in 4.1.1, and
-// firstOctetMask is the mask that is or'ed with the first octet of
-// the encoding (which must have none of its lower N bits set).
-Encoder.prototype.encodeInteger = function(firstOctetMask, N, I) {
+// opCode is put into the top (8 - N) bytes of the first octet of the
+// encoded integer.
+Encoder.prototype.encodeInteger = function(opCode, N, I) {
   var nextMarker = (1 << N) - 1;
 
   if (I < nextMarker) {
-    this.encodeOctet(firstOctetMask | I);
+    this.encodeOctet((opCode << N) | I);
     return;
   }
 
   if (N > 0) {
-    this.encodeOctet(firstOctetMask | nextMarker);
+    this.encodeOctet((opCode << N) | nextMarker);
   }
 
   I -= nextMarker;
@@ -45,7 +45,7 @@ Encoder.prototype.encodeOctetSequence = function(str) {
 
 // Encode an indexed header as described in 4.2.
 Encoder.prototype.encodeIndexedHeader = function(index) {
-  var opCode = 0x80;
+  var opCode = 0x1;
   var prefixLength = 7;
   this.encodeInteger(opCode, prefixLength, index);
 }
@@ -53,7 +53,7 @@ Encoder.prototype.encodeIndexedHeader = function(index) {
 // Encode a literal header without indexing as described in 4.3.1.
 Encoder.prototype.encodeLiteralHeaderWithoutIndexing = function(
   indexOrName, value) {
-  var opCode = 0x60;
+  var opCode = 0x3;
   var prefixLength = 5;
   switch (typeof indexOrName) {
     case 'number':
@@ -75,7 +75,7 @@ Encoder.prototype.encodeLiteralHeaderWithoutIndexing = function(
 // 4.3.2.
 Encoder.prototype.encodeLiteralHeaderWithIncrementalIndexing = function(
   indexOrName, value) {
-  var opCode = 0x40;
+  var opCode = 0x2;
   var prefixLength = 5;
   switch (typeof indexOrName) {
     case 'number':
