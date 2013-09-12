@@ -68,7 +68,7 @@ Decoder.prototype.decodeNextName = function(N, encodingContext) {
   return name;
 };
 
-Decoder.prototype.decodeNextOpcode = function(encodingContext, emitFunction) {
+Decoder.prototype.processNextOpcode = function(encodingContext, emitFunction) {
   var nextOctet = this.peekNextOctet();
 
   if ((nextOctet >> 7) == 0x1) {
@@ -135,7 +135,7 @@ HeaderDecoder.prototype.decodeHeaderSet = function(
   encodedHeaderSet, emitFunction) {
   var decoder = new Decoder(encodedHeaderSet);
   while (decoder.hasData()) {
-    decoder.decodeNextOpcode(this.encodingContext_, emitFunction);
+    decoder.processNextOpcode(this.encodingContext_, emitFunction);
   }
   var self = this;
   this.encodingContext_.forEachEntry(
