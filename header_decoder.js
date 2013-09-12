@@ -96,13 +96,14 @@ Decoder.prototype.decodeNextOpcode = function(
     if (indexPlusOneOrZero === null) {
       return null;
     }
-    var indexOrName = null;
+    var name = null;
     if (indexPlusOneOrZero == 0) {
-      indexOrName = this.decodeNextASCIIString();
+      name = this.decodeNextASCIIString();
     } else {
-      indexOrName = indexPlusOneOrZero - 1;
+      var index = indexPlusOneOrZero - 1;
+      name = encodingContext.getIndexedHeaderName(index);
     }
-    if (indexOrName === null) {
+    if (name === null) {
       return null;
     }
     var substitutedIndex = this.decodeNextInteger(0);
@@ -115,12 +116,11 @@ Decoder.prototype.decodeNextOpcode = function(
     }
     var result =
       encodingContext.processLiteralHeaderWithSubstitutionIndexing(
-        indexOrName, substitutedIndex, value);
+        name, substitutedIndex, value);
     touched.offsetIndices(result.offset);
     if (result.index >= 0) {
       touched.addReference(result.index);
     }
-    var name = encodingContext.getIndexedHeaderName(result.index);
     emitFunction(name, value);
     return 1;
   } else if ((nextOctet >> 5) == 0x2) {
@@ -129,13 +129,14 @@ Decoder.prototype.decodeNextOpcode = function(
     if (indexPlusOneOrZero === null) {
       return null;
     }
-    var indexOrName = null;
+    var name = null;
     if (indexPlusOneOrZero == 0) {
-      indexOrName = this.decodeNextASCIIString();
+      name = this.decodeNextASCIIString();
     } else {
-      indexOrName = indexPlusOneOrZero - 1;
+      var index = indexPlusOneOrZero - 1;
+      name = encodingContext.getIndexedHeaderName(index);
     }
-    if (indexOrName === null) {
+    if (name === null) {
       return null;
     }
     var value = this.decodeNextASCIIString();
@@ -143,12 +144,11 @@ Decoder.prototype.decodeNextOpcode = function(
       return null;
     }
     var result = encodingContext.processLiteralHeaderWithIncrementalIndexing(
-      indexOrName, value);
+      name, value);
     touched.offsetIndices(result.offset);
     if (result.index >= 0) {
       touched.addReference(result.index);
     }
-    var name = encodingContext.getIndexedHeaderName(result.index);
     emitFunction(name, value);
     return 1;
   } else if ((nextOctet >> 5) == 0x3) {

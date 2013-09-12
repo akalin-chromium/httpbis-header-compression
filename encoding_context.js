@@ -312,22 +312,11 @@ EncodingContext.prototype.processIndexedHeader = function(index) {
 }
 
 EncodingContext.prototype.processLiteralHeaderWithoutIndexing = function(
-  indexOrName, value) {
+  name, value) {
 }
 
 EncodingContext.prototype.processLiteralHeaderWithIncrementalIndexing =
-function(indexOrName, value) {
-  var name;
-  switch (typeof indexOrName) {
-    case 'number':
-      var entry = this.headerTable_.getEntry(indexOrName);
-      name = entry.name;
-      break;
-
-    case 'string':
-      name = indexOrName;
-      break;
-  }
+function(name, value) {
   var result = this.headerTable_.tryAppendEntry(name, value);
   this.referenceSet_.offsetIndices(result.offset);
   if (result.index >= 0) {
@@ -337,18 +326,7 @@ function(indexOrName, value) {
 }
 
 EncodingContext.prototype.processLiteralHeaderWithSubstitutionIndexing =
-function(indexOrName, substitutedIndex, value) {
-  var name;
-  switch (typeof indexOrName) {
-    case 'number':
-      var entry = this.headerTable_.getEntry(indexOrName);
-      name = entry.name;
-      break;
-
-    case 'string':
-      name = indexOrName;
-      break;
-  }
+function(name, substitutedIndex, value) {
   var result = this.headerTable_.tryReplaceEntry(substitutedIndex, name, value);
   this.referenceSet_.offsetIndices(result.offset);
   if (result.index >= 0) {

@@ -169,7 +169,7 @@ HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
       if (index !== null) {
         var result =
           this.encodingContext_.processLiteralHeaderWithSubstitutionIndexing(
-            index, index, value);
+            name, index, value);
         encoder.encodeLiteralHeaderWithSubstitutionIndexing(
           index, index, value);
         emitted.offsetIndices(result.offset);
@@ -194,9 +194,9 @@ HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
       }
     }
 
-    var indexOrName = (index === null) ? name : index;
     this.encodingContext_.processLiteralHeaderWithoutIndexing(
-      indexOrName, value);
+      name, value);
+    var indexOrName = (index === null) ? name : index;
     encoder.encodeLiteralHeaderWithoutIndexing(indexOrName, value);
   }
 
