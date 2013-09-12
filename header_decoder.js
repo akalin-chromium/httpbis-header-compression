@@ -118,11 +118,11 @@ Decoder.prototype.decodeNextOpcode = function(encodingContext, emitFunction) {
     if (value === null) {
       return null;
     }
-    var result =
+    var index =
       encodingContext.processLiteralHeaderWithSubstitutionIndexing(
         name, substitutedIndex, value);
-    if (result.index >= 0) {
-      encodingContext.addTouches(result.index, 0);
+    if (index >= 0) {
+      encodingContext.addTouches(index, 0);
     }
     emitFunction(name, value);
     return 1;
@@ -136,10 +136,10 @@ Decoder.prototype.decodeNextOpcode = function(encodingContext, emitFunction) {
     if (value === null) {
       return null;
     }
-    var result = encodingContext.processLiteralHeaderWithIncrementalIndexing(
+    var index = encodingContext.processLiteralHeaderWithIncrementalIndexing(
       name, value);
-    if (result.index >= 0) {
-      encodingContext.addTouches(result.index, 0);
+    if (index >= 0) {
+      encodingContext.addTouches(index, 0);
     }
     emitFunction(name, value);
     return 1;

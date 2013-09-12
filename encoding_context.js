@@ -82,12 +82,9 @@ HeaderTable.prototype.removeFirstEntry_ = function() {
 
 HeaderTable.prototype.setMaxSize = function(maxSize) {
   this.maxSize_ = maxSize;
-  var offset = 0;
   while (this.size_ > this.maxSize_) {
     this.removeFirstEntry_();
-    --offset;
   }
-  return offset;
 };
 
 HeaderTable.prototype.equals = function(other) {
@@ -193,10 +190,8 @@ HeaderTable.prototype.forEachEntry = function(fn) {
 
 HeaderTable.prototype.tryAppendEntry = function(name, value) {
   var index = -1;
-  var offset = 0;
   var sizeDelta = name.length + value.length + 32;
   while (this.entries_.length > 0 && this.size_ + sizeDelta > this.maxSize_) {
-    --offset;
     this.removeFirstEntry_();
   }
   if (this.size_ + sizeDelta <= this.maxSize_) {
@@ -204,18 +199,16 @@ HeaderTable.prototype.tryAppendEntry = function(name, value) {
     index = this.entries_.length;
     this.entries_.push({ name: name, value: value });
   }
-  return { offset: offset, index: index };
+  return index;
 }
 
 HeaderTable.prototype.tryReplaceEntry = function(index, name, value) {
-  var offset = 0;
   var existingEntry = this.entries_[index];
   var sizeDelta =
     (name.length + value.length + 32) -
     (existingEntry.name.length + existingEntry.value.length + 32);
   while (this.entries_.length > 0 && this.size_ + sizeDelta > this.maxSize_) {
     --index;
-    --offset;
     this.removeFirstEntry_();
   }
   if (this.size_ + sizeDelta <= this.maxSize_) {
@@ -225,82 +218,12 @@ HeaderTable.prototype.tryReplaceEntry = function(index, name, value) {
       this.entries_[index] = newEntry;
     } else {
       index = 0;
-      ++offset;
       this.entries_.unshift(newEntry);
     }
   } else {
     index = -1;
   }
-  return { offset: offset, index: index };
-}
-
-function ReferenceSet() {
-  this.references_ = {};
-}
-
-ReferenceSet.prototype.getNumReferences = function() {
-  return Object.keys(this.references_).length;
-}
-
-ReferenceSet.prototype.equals = function(other) {
-  if (this.getNumReferences() != other.getNumReferences()) {
-    return false;
-  }
-  var diff1 = this.getDifference(other);
-  var diff2 = other.getDifference(this);
-  return (diff1.getNumReferences() + diff2.getNumReferences()) == 0;
-}
-
-ReferenceSet.prototype.hasReference = function(index) {
-  return index.toString(10) in this.references_;
-}
-
-ReferenceSet.prototype.getReferenceCount = function(index) {
-  return this.hasReference(index) ? this.references_[index.toString(10)] : null;
-}
-
-ReferenceSet.prototype.addReference = function(index, count) {
-  index = index.toString(10);
-  if (index < 0) {
-    throw new Error('negative index ' + index);
-  }
-  if (count === undefined) {
-    count = 1;
-  }
-  this.references_[index] = this.references_[index] || 0;
-  this.references_[index] += count;
-}
-
-ReferenceSet.prototype.removeReference = function(index) {
-  delete this.references_[index.toString(10)];
-}
-
-ReferenceSet.prototype.processReferences = function(fn) {
-  for (var indexStr in this.references_) {
-    var index = parseInt(indexStr, 10);
-    fn(index);
-  }
-}
-
-ReferenceSet.prototype.getDifference = function(other) {
-  var difference = new ReferenceSet();
-  this.processReferences(function(index) {
-    if (!other.hasReference(index)) {
-      difference.addReference(index);
-    }
-  });
-  return difference;
-}
-
-ReferenceSet.prototype.offsetIndices = function(offset) {
-  var newReferences = {};
-  this.processReferences(function(index) {
-    var newIndex = index + offset;
-    if (newIndex >= 0) {
-      newReferences[newIndex] = 1;
-    }
-  });
-  this.references_ = newReferences;
+  return index;
 }
 
 function EncodingContext(direction) {
@@ -379,18 +302,18 @@ EncodingContext.prototype.processIndexedHeader = function(index) {
 
 EncodingContext.prototype.processLiteralHeaderWithIncrementalIndexing =
 function(name, value) {
-  var result = this.headerTable_.tryAppendEntry(name, value);
-  if (result.index >= 0) {
-    this.headerTable_.setReferenced(result.index);
+  var index = this.headerTable_.tryAppendEntry(name, value);
+  if (index >= 0) {
+    this.headerTable_.setReferenced(index);
   }
-  return result;
+  return index;
 }
 
 EncodingContext.prototype.processLiteralHeaderWithSubstitutionIndexing =
 function(name, substitutedIndex, value) {
-  var result = this.headerTable_.tryReplaceEntry(substitutedIndex, name, value);
-  if (result.index >= 0) {
-    this.headerTable_.setReferenced(result.index);
+  var index = this.headerTable_.tryReplaceEntry(substitutedIndex, name, value);
+  if (index >= 0) {
+    this.headerTable_.setReferenced(index);
   }
-  return result;
+  return index;
 }

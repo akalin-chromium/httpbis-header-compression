@@ -167,13 +167,13 @@ HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
 
     if (this.compressionLevel_ > 2) {
       if (index !== null) {
-        var result =
+        var newIndex =
           this.encodingContext_.processLiteralHeaderWithSubstitutionIndexing(
             name, index, value);
         encoder.encodeLiteralHeaderWithSubstitutionIndexing(
           index, index, value);
-        if (result.index >= 0) {
-          this.encodingContext_.addTouches(result.index, 1);
+        if (newIndex >= 0) {
+          this.encodingContext_.addTouches(newIndex, 1);
         }
         continue;
       }
@@ -181,12 +181,12 @@ HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
 
     if (this.compressionLevel_ > 3) {
       if (index === null) {
-        var result =
+        var newIndex =
           this.encodingContext_.processLiteralHeaderWithIncrementalIndexing(
             name, value);
         encoder.encodeLiteralHeaderWithIncrementalIndexing(name, value);
-        if (result.index >= 0) {
-          this.encodingContext_.addTouches(result.index, 1);
+        if (newIndex >= 0) {
+          this.encodingContext_.addTouches(newIndex, 1);
         }
         continue;
       }
