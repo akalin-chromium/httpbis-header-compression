@@ -99,6 +99,21 @@ function isValidHeaderValue(str) {
   return VALID_HEADER_VALUE_REGEXP.test(str);
 }
 
+// A constant-time string comparison function, as suggested by section
+// 6.
+function stringsEqualConstantTime(str1, str2) {
+  var length = str1.length;
+  if (str2.length != length) {
+    return false;
+  }
+
+  var x = 0;
+  for (var i = 0; i < length; ++i) {
+    x |= str1.charCodeAt(i) ^ str2.charCodeAt(i);
+  }
+  return x == 0;
+}
+
 function HeaderTable() {
   this.entries_ = [];
   this.size_ = 0;
@@ -126,8 +141,8 @@ HeaderTable.prototype.equals = function(other) {
   for (var i = 0; i < this.entries_.length; ++i) {
     var entry = this.entries_[i];
     var otherEntry = other.entries_[i];
-    // TODO(akalin): Compare names case-insensitively.
-    if (entry.name != otherEntry.name || entry.value != otherEntry.value ||
+    if (!stringsEqualConstantTime(entry.name, otherEntry.name) ||
+        !stringsEqualConstantTime(entry.value, otherEntry.value) ||
         ('referenced' in entry) != ('referenced' in otherEntry)) {
       return false;
     }
@@ -150,8 +165,7 @@ HeaderTable.prototype.findName = function(name) {
 
   for (var i = 0; i < this.entries_.length; ++i) {
     var entry = this.entries_[i];
-    // TODO(akalin): Use constant-time string comparison.
-    if (entry.name == name) {
+    if (stringsEqualConstantTime(entry.name, name)) {
       return i;
     }
   }
@@ -169,8 +183,8 @@ HeaderTable.prototype.findNameAndValue = function(name, value) {
 
   for (var i = 0; i < this.entries_.length; ++i) {
     var entry = this.entries_[i];
-    // TODO(akalin): Use constant-time string comparison.
-    if (entry.name == name && entry.value == value) {
+    if (stringsEqualConstantTime(entry.name, name) &&
+        stringsEqualConstantTime(entry.value, value)) {
       return i;
     }
   }
