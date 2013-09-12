@@ -126,6 +126,14 @@ HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
     var nameValuePair = headerSet[i];
     var name = nameValuePair[0];
     var value = nameValuePair[1];
+    if (!isValidHeaderName(name)) {
+      throw new Error('Invalid header name: ' + name);
+    }
+
+    if (!isValidHeaderValue(value)) {
+      throw new Error('Invalid header value: ' + value);
+    }
+
     if (this.compressionLevel_ > 1) {
       var nameValueIndex = this.encodingContext_.findNameAndValue(name, value);
       if (nameValueIndex !== null) {
