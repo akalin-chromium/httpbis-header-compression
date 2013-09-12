@@ -1,9 +1,10 @@
 'use strict';
 
-function Decoder(buffer, encodingContext) {
+function Decoder(buffer, encodingContext, emitFunction) {
   this.buffer_ = buffer;
   this.i_ = 0;
   this.encodingContext_ = encodingContext;
+  this.emitFunction_ = emitFunction;
 }
 
 Decoder.prototype.hasData = function() {
@@ -69,7 +70,7 @@ Decoder.prototype.decodeNextName = function(N) {
   return name;
 };
 
-Decoder.prototype.processNextOpcode = function(emitFunction) {
+Decoder.prototype.processNextOpcode = function() {
   var nextOctet = this.peekNextOctet();
 
   if ((nextOctet >> 7) == 0x1) {
@@ -81,7 +82,7 @@ Decoder.prototype.processNextOpcode = function(emitFunction) {
     }
     this.encodingContext_.addTouches(index, 0);
     var result = this.encodingContext_.getIndexedHeaderNameAndValue(index);
-    emitFunction(result.name, result.value);
+    this.emitFunction_(result.name, result.value);
     return;
   }
 
@@ -96,7 +97,7 @@ Decoder.prototype.processNextOpcode = function(emitFunction) {
     if (index >= 0) {
       this.encodingContext_.addTouches(index, 0);
     }
-    emitFunction(name, value);
+    this.emitFunction_(name, value);
     return;
   }
 
@@ -110,7 +111,7 @@ Decoder.prototype.processNextOpcode = function(emitFunction) {
     if (index >= 0) {
       this.encodingContext_.addTouches(index, 0);
     }
-    emitFunction(name, value);
+    this.emitFunction_(name, value);
     return;
   }
 
@@ -118,7 +119,7 @@ Decoder.prototype.processNextOpcode = function(emitFunction) {
     // Literal header without indexing.
     var name = this.decodeNextName(5);
     var value = this.decodeNextASCIIString();
-    emitFunction(name, value);
+    this.emitFunction_(name, value);
     return;
   }
 
@@ -135,9 +136,10 @@ HeaderDecoder.prototype.setHeaderTableMaxSize = function(maxSize) {
 
 HeaderDecoder.prototype.decodeHeaderSet = function(
   encodedHeaderSet, emitFunction) {
-  var decoder = new Decoder(encodedHeaderSet, this.encodingContext_);
+  var decoder =
+    new Decoder(encodedHeaderSet, this.encodingContext_, emitFunction);
   while (decoder.hasData()) {
-    decoder.processNextOpcode(emitFunction);
+    decoder.processNextOpcode();
   }
   this.encodingContext_.forEachEntry(
     function(index, name, value, referenced, touchCount) {
