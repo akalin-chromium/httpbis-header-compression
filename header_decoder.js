@@ -71,6 +71,21 @@ Decoder.prototype.decodeNextASCIIString = function() {
   return str;
 };
 
+Decoder.prototype.decodeNextName = function(N, encodingContext) {
+  var indexPlusOneOrZero = this.decodeNextInteger(N);
+  if (indexPlusOneOrZero === null) {
+    return null;
+  }
+  var name = null;
+  if (indexPlusOneOrZero == 0) {
+    name = this.decodeNextASCIIString();
+  } else {
+    var index = indexPlusOneOrZero - 1;
+    name = encodingContext.getIndexedHeaderName(index);
+  }
+  return name;
+};
+
 Decoder.prototype.decodeNextOpcode = function(
   encodingContext, touched, emitFunction) {
   var nextOctet = this.peekNextOctet();
@@ -92,17 +107,7 @@ Decoder.prototype.decodeNextOpcode = function(
     return 1;
   } else if ((nextOctet >> 6) == 0x0) {
     // Literal header with substitution indexing.
-    var indexPlusOneOrZero = this.decodeNextInteger(6);
-    if (indexPlusOneOrZero === null) {
-      return null;
-    }
-    var name = null;
-    if (indexPlusOneOrZero == 0) {
-      name = this.decodeNextASCIIString();
-    } else {
-      var index = indexPlusOneOrZero - 1;
-      name = encodingContext.getIndexedHeaderName(index);
-    }
+    var name = this.decodeNextName(6, encodingContext);
     if (name === null) {
       return null;
     }
@@ -125,17 +130,7 @@ Decoder.prototype.decodeNextOpcode = function(
     return 1;
   } else if ((nextOctet >> 5) == 0x2) {
     // Literal header with incremental indexing.
-    var indexPlusOneOrZero = this.decodeNextInteger(5);
-    if (indexPlusOneOrZero === null) {
-      return null;
-    }
-    var name = null;
-    if (indexPlusOneOrZero == 0) {
-      name = this.decodeNextASCIIString();
-    } else {
-      var index = indexPlusOneOrZero - 1;
-      name = encodingContext.getIndexedHeaderName(index);
-    }
+    var name = this.decodeNextName(5, encodingContext);
     if (name === null) {
       return null;
     }
@@ -153,17 +148,7 @@ Decoder.prototype.decodeNextOpcode = function(
     return 1;
   } else if ((nextOctet >> 5) == 0x3) {
     // Literal header without indexing.
-    var indexPlusOneOrZero = this.decodeNextInteger(5);
-    if (indexPlusOneOrZero === null) {
-      return null;
-    }
-    var name = null;
-    if (indexPlusOneOrZero == 0) {
-      name = this.decodeNextASCIIString();
-    } else {
-      var index = indexPlusOneOrZero - 1;
-      name = encodingContext.getIndexedHeaderName(index);
-    }
+    var name = this.decodeNextName(5, encodingContext);
     if (name === null) {
       return null;
     }
