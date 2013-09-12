@@ -117,7 +117,9 @@ Decoder.prototype.decodeNextOpcode = function(
       encodingContext.processLiteralHeaderWithSubstitutionIndexing(
         indexOrName, substitutedIndex, value);
     touched.offsetIndices(result.offset);
-    touched.addReference(result.index);
+    if (result.index >= 0) {
+      touched.addReference(result.index);
+    }
     var name = encodingContext.getIndexedHeaderName(result.index);
     emitFunction(name, value);
     return 1;
@@ -143,7 +145,9 @@ Decoder.prototype.decodeNextOpcode = function(
     var result = encodingContext.processLiteralHeaderWithIncrementalIndexing(
       indexOrName, value);
     touched.offsetIndices(result.offset);
-    touched.addReference(result.index);
+    if (result.index >= 0) {
+      touched.addReference(result.index);
+    }
     var name = encodingContext.getIndexedHeaderName(result.index);
     emitFunction(name, value);
     return 1;

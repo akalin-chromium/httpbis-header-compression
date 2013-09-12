@@ -173,7 +173,9 @@ HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
         encoder.encodeLiteralHeaderWithSubstitutionIndexing(
           index, index, value);
         emitted.offsetIndices(result.offset);
-        emitted.addReference(result.index);
+        if (result.index >= 0) {
+          emitted.addReference(result.index);
+        }
         continue;
       }
     }
@@ -185,7 +187,9 @@ HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
             name, value);
         encoder.encodeLiteralHeaderWithIncrementalIndexing(name, value);
         emitted.offsetIndices(result.offset);
-        emitted.addReference(result.index);
+        if (result.index >= 0) {
+          emitted.addReference(result.index);
+        }
         continue;
       }
     }

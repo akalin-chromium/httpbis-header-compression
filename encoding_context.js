@@ -204,6 +204,9 @@ ReferenceSet.prototype.getReferenceCount = function(index) {
 
 ReferenceSet.prototype.addReference = function(index, count) {
   index = index.toString(10);
+  if (index < 0) {
+    throw new Error('negative index ' + index);
+  }
   if (count === undefined) {
     count = 1;
   }
@@ -327,7 +330,9 @@ function(indexOrName, value) {
   }
   var result = this.headerTable_.tryAppendEntry(name, value);
   this.referenceSet_.offsetIndices(result.offset);
-  this.referenceSet_.addReference(result.index);
+  if (result.index >= 0) {
+    this.referenceSet_.addReference(result.index);
+  }
   return result;
 }
 
@@ -346,6 +351,8 @@ function(indexOrName, substitutedIndex, value) {
   }
   var result = this.headerTable_.tryReplaceEntry(substitutedIndex, name, value);
   this.referenceSet_.offsetIndices(result.offset);
-  this.referenceSet_.addReference(result.index);
+  if (result.index >= 0) {
+    this.referenceSet_.addReference(result.index);
+  }
   return result;
 }
