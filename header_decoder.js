@@ -24,6 +24,8 @@ Decoder.prototype.decodeNextOctet = function() {
   return nextOctet;
 };
 
+// Decodes the next integer based on the representation described in
+// 4.1.1. N is the number of bits of the prefix as described in 4.1.1.
 Decoder.prototype.decodeNextInteger = function(N) {
   var I = 0;
   var hasMore = true;
@@ -70,7 +72,8 @@ Decoder.prototype.decodeNextName = function(N) {
   return name;
 };
 
-Decoder.prototype.processNextOpcode = function() {
+// Processes the next header representation as described in 3.2.1.
+Decoder.prototype.processNextHeaderRepresentation = function() {
   var nextOctet = this.peekNextOctet();
 
   if ((nextOctet >> 7) == 0x1) {
@@ -139,8 +142,11 @@ HeaderDecoder.prototype.decodeHeaderSet = function(
   var decoder =
     new Decoder(encodedHeaderSet, this.encodingContext_, emitFunction);
   while (decoder.hasData()) {
-    decoder.processNextOpcode();
+    decoder.processNextHeaderRepresentation();
   }
+
+  // Emits each header contained in the reference set that has not
+  // already been emitted as described in 3.2.2.
   this.encodingContext_.forEachEntry(
     function(index, name, value, referenced, touchCount) {
       if (referenced && (touchCount === null)) {
