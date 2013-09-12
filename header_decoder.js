@@ -54,7 +54,7 @@ Decoder.prototype.decodeNextInteger_ = function(N) {
 
 // Decodes the next length-prefixed octet sequence and returns it as a
 // string with character codes representing the octets.
-Decoder.prototype.decodeNextString_ = function() {
+Decoder.prototype.decodeNextOctetSequence_ = function() {
   var length = this.decodeNextInteger_(0);
   var str = '';
   for (var i = 0; i < length; ++i) {
@@ -71,7 +71,7 @@ Decoder.prototype.decodeNextName_ = function(N) {
   var indexPlusOneOrZero = this.decodeNextInteger_(N);
   var name = null;
   if (indexPlusOneOrZero == 0) {
-    name = this.decodeNextString_();
+    name = this.decodeNextOctetSequence_();
   } else {
     var index = indexPlusOneOrZero - 1;
     name = this.encodingContext_.getIndexedHeaderName(index);
@@ -85,7 +85,7 @@ Decoder.prototype.decodeNextName_ = function(N) {
 // Decodes the next header value based on the representation described
 // in 4.1.3.
 Decoder.prototype.decodeNextValue_ = function() {
-  var value = this.decodeNextString_();
+  var value = this.decodeNextOctetSequence_();
   if (!isValidHeaderValue(value)) {
     throw new Error('Invalid header value: ' + value);
   }
