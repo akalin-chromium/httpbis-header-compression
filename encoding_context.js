@@ -5,6 +5,22 @@
 // characters greater than \xff are invalid; this policy is
 // encapsulated in the isValidHeader{Name,Value}() functions below.
 
+// Indexed header (4.2).
+var INDEX_OPCODE = 0x1;
+var INDEX_N = 7;
+
+// Literal header without indexing (4.3.1).
+var LITERAL_NO_INDEX_OPCODE = 0x3;
+var LITERAL_NO_INDEX_N = 5;
+
+// Literal header with incremental indexing (4.3.2).
+var LITERAL_INCREMENTAL_OPCODE = 0x2;
+var LITERAL_INCREMENTAL_N = 5;
+
+// Literal header with substitution indexing (4.3.3).
+var LITERAL_SUBSTITUTION_OPCODE = 0x0;
+var LITERAL_SUBSTITUTION_N = 6;
+
 var REQUEST = 0;
 var RESPONSE = 1;
 

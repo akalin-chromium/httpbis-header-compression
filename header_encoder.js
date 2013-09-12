@@ -45,24 +45,21 @@ Encoder.prototype.encodeOctetSequence = function(str) {
 
 // Encode an indexed header as described in 4.2.
 Encoder.prototype.encodeIndexedHeader = function(index) {
-  var opCode = 0x1;
-  var prefixLength = 7;
-  this.encodeInteger(opCode, prefixLength, index);
+  this.encodeInteger(INDEX_OPCODE, INDEX_N, index);
 }
 
 // Encode a literal header without indexing as described in 4.3.1.
 Encoder.prototype.encodeLiteralHeaderWithoutIndexing = function(
   indexOrName, value) {
-  var opCode = 0x3;
-  var prefixLength = 5;
   switch (typeof indexOrName) {
     case 'number':
-      this.encodeInteger(opCode, prefixLength, indexOrName + 1);
+      this.encodeInteger(LITERAL_NO_INDEX_OPCODE, LITERAL_NO_INDEX_N,
+                         indexOrName + 1);
       this.encodeOctetSequence(value);
       return;
 
     case 'string':
-      this.encodeInteger(opCode, prefixLength, 0);
+      this.encodeInteger(LITERAL_NO_INDEX_OPCODE, LITERAL_NO_INDEX_N, 0);
       this.encodeOctetSequence(indexOrName);
       this.encodeOctetSequence(value);
       return;
@@ -75,16 +72,16 @@ Encoder.prototype.encodeLiteralHeaderWithoutIndexing = function(
 // 4.3.2.
 Encoder.prototype.encodeLiteralHeaderWithIncrementalIndexing = function(
   indexOrName, value) {
-  var opCode = 0x2;
-  var prefixLength = 5;
   switch (typeof indexOrName) {
     case 'number':
-      this.encodeInteger(opCode, prefixLength, indexOrName + 1);
+      this.encodeInteger(LITERAL_INCREMENTAL_OPCODE, LITERAL_INCREMENTAL_N,
+                         indexOrName + 1);
       this.encodeOctetSequence(value);
       return;
 
     case 'string':
-      this.encodeInteger(opCode, prefixLength, 0);
+      this.encodeInteger(LITERAL_INCREMENTAL_OPCODE, LITERAL_INCREMENTAL_N,
+                         0);
       this.encodeOctetSequence(indexOrName);
       this.encodeOctetSequence(value);
       return;
@@ -97,17 +94,17 @@ Encoder.prototype.encodeLiteralHeaderWithIncrementalIndexing = function(
 // 4.3.3.
 Encoder.prototype.encodeLiteralHeaderWithSubstitutionIndexing = function(
   indexOrName, substitutedIndex, value) {
-  var opCode = 0x0;
-  var prefixLength = 6;
   switch (typeof indexOrName) {
     case 'number':
-      this.encodeInteger(opCode, prefixLength, indexOrName + 1);
+      this.encodeInteger(LITERAL_SUBSTITUTION_OPCODE, LITERAL_SUBSTITUTION_N,
+                         indexOrName + 1);
       this.encodeInteger(0, 0, substitutedIndex);
       this.encodeOctetSequence(value);
       return;
 
     case 'string':
-      this.encodeInteger(opCode, prefixLength, 0);
+      this.encodeInteger(LITERAL_SUBSTITUTION_OPCODE, LITERAL_SUBSTITUTION_N,
+                         0);
       this.encodeOctetSequence(indexOrName);
       this.encodeInteger(0, 0, substitutedIndex);
       this.encodeOctetSequence(value);

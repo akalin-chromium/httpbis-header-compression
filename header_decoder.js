@@ -98,7 +98,7 @@ Decoder.prototype.processNextHeaderRepresentation = function() {
 
   // Touches are used below to track which headers have been emitted.
 
-  if ((nextOctet >> 7) == 0x1) {
+  if ((nextOctet >> INDEX_N) == INDEX_OPCODE) {
     // Indexed header (4.2).
     var index = this.decodeNextInteger_(7);
     this.encodingContext_.processIndexedHeader(index);
@@ -111,17 +111,17 @@ Decoder.prototype.processNextHeaderRepresentation = function() {
     return;
   }
 
-  if ((nextOctet >> 5) == 0x3) {
+  if ((nextOctet >> LITERAL_NO_INDEX_N) == LITERAL_NO_INDEX_OPCODE) {
     // Literal header without indexing (4.3.1).
-    var name = this.decodeNextName_(5);
+    var name = this.decodeNextName_(LITERAL_NO_INDEX_N);
     var value = this.decodeNextValue_();
     this.emitFunction_(name, value);
     return;
   }
 
-  if ((nextOctet >> 5) == 0x2) {
+  if ((nextOctet >> LITERAL_INCREMENTAL_N) == LITERAL_INCREMENTAL_OPCODE) {
     // Literal header with incremental indexing (4.3.2).
-    var name = this.decodeNextName_(5);
+    var name = this.decodeNextName_(LITERAL_INCREMENTAL_N);
     var value = this.decodeNextValue_();
     var index =
       this.encodingContext_.processLiteralHeaderWithIncrementalIndexing(
@@ -133,9 +133,9 @@ Decoder.prototype.processNextHeaderRepresentation = function() {
     return;
   }
 
-  if ((nextOctet >> 6) == 0x0) {
+  if ((nextOctet >> LITERAL_SUBSTITUTION_N) == LITERAL_SUBSTITUTION_OPCODE) {
     // Literal header with substitution indexing (4.3.3).
-    var name = this.decodeNextName_(6);
+    var name = this.decodeNextName_(LITERAL_SUBSTITUTION_N);
     var substitutedIndex = this.decodeNextInteger_(0);
     var value = this.decodeNextValue_();
     var index =
