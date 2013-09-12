@@ -187,7 +187,7 @@ HeaderTable.prototype.clearTouches = function(index) {
 HeaderTable.prototype.forEachEntry = function(fn) {
   for (var i = 0; i < this.entries_.length; ++i) {
     var entry = this.entries_[i];
-    fn(i, entry.name, entry.value, 'referenced' in entry);
+    fn(i, entry.name, entry.value, this.isReferenced(i), this.getTouchCount(i));
   }
 }
 

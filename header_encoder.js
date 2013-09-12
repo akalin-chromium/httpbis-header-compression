@@ -199,11 +199,12 @@ HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
   }
 
   var self = this;
-  this.encodingContext_.forEachEntry(function(index, name, value, referenced) {
-    if (referenced && !emitted.hasReference(index)) {
-      encoder.encodeIndexedHeader(index);
-      self.encodingContext_.processIndexedHeader(index);
-    }
+  this.encodingContext_.forEachEntry(
+    function(index, name, value, referenced, touchCount) {
+      if (referenced && !emitted.hasReference(index)) {
+        encoder.encodeIndexedHeader(index);
+        self.encodingContext_.processIndexedHeader(index);
+      }
     });
 
   return encoder.flush();
