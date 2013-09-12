@@ -64,9 +64,6 @@ Decoder.prototype.decodeNextName = function(N, encodingContext) {
   } else {
     var index = indexPlusOneOrZero - 1;
     name = encodingContext.getIndexedHeaderName(index);
-    if (name === null) {
-      throw new Error('Invalid index ' + index);
-    }
   }
   return name;
 };
@@ -83,9 +80,6 @@ Decoder.prototype.decodeNextOpcode = function(encodingContext, emitFunction) {
     }
     encodingContext.addTouches(index, 0);
     var result = encodingContext.getIndexedHeaderNameAndValue(index);
-    if (result === null) {
-      throw new Error('Invalid index ' + index);
-    }
     emitFunction(result.name, result.value);
     return;
   }

@@ -107,7 +107,10 @@ HeaderTable.prototype.equals = function(other) {
 }
 
 HeaderTable.prototype.getEntry = function(index) {
-  return (index in this.entries_) ? this.entries_[index] : null;
+  if (!(index in this.entries_)) {
+    throw new Error('Invalid index ' + index);
+  }
+  return this.entries_[index];
 }
 
 HeaderTable.prototype.findName = function(name) {
@@ -133,52 +136,30 @@ HeaderTable.prototype.findNameAndValue = function(name, value) {
 };
 
 HeaderTable.prototype.isReferenced = function(index) {
-  var entry = this.getEntry(index);
-  if (entry === null) {
-    return null;
-  }
-  return 'referenced' in entry;
+  return 'referenced' in this.getEntry(index);
 };
 
 HeaderTable.prototype.setReferenced = function(index) {
-  var entry = this.getEntry(index);
-  if (entry === null) {
-    return null;
-  }
-  entry.referenced = true;
+  this.getEntry(index).referenced = true;
 };
 
 HeaderTable.prototype.unsetReferenced = function(index) {
-  var entry = this.getEntry(index);
-  if (entry === null) {
-    return null;
-  }
-  delete entry.referenced;
+  delete this.getEntry(index).referenced;
 };
 
 HeaderTable.prototype.getTouchCount = function(index) {
   var entry = this.getEntry(index);
-  if (entry === null) {
-    return null;
-  }
   return ('touchCount' in entry) ? entry.touchCount : null;
 };
 
 HeaderTable.prototype.addTouches = function(index, touchCount) {
   var entry = this.getEntry(index);
-  if (entry === null) {
-    return null;
-  }
   entry.touchCount = entry.touchCount || 0;
   entry.touchCount += touchCount;
 };
 
 HeaderTable.prototype.clearTouches = function(index) {
-  var entry = this.getEntry(index);
-  if (entry === null) {
-    return null;
-  }
-  delete entry.touchCount;
+  delete this.getEntry(index).touchCount;
 };
 
 HeaderTable.prototype.forEachEntry = function(fn) {
@@ -264,18 +245,11 @@ EncodingContext.prototype.clearTouches = function(index) {
 };
 
 EncodingContext.prototype.getIndexedHeaderName = function(index) {
-  var entry = this.headerTable_.getEntry(index);
-  if (entry === null) {
-    return null;
-  }
-  return entry.name;
+  return this.headerTable_.getEntry(index).name;
 }
 
 EncodingContext.prototype.getIndexedHeaderNameAndValue = function(index) {
   var entry = this.headerTable_.getEntry(index);
-  if (entry === null) {
-    return null;
-  }
   return { name: entry.name, value: entry.value };
 }
 
