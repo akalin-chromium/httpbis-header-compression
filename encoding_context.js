@@ -1,5 +1,10 @@
 'use strict';
 
+// For simplicity, we assume that the character codes of a string
+// represent an octet sequence. This implies that strings with
+// characters greater than \xff are invalid; this policy is
+// encapsulated in the isValidHeader{Name,Value}() functions below.
+
 var REQUEST = 0;
 var RESPONSE = 1;
 
@@ -69,6 +74,31 @@ var PRE_DEFINED_RESPONSE_HEADER_TABLE = [
   [ "www-authenticate",            ""    ],  // 29
 ];
 
+// This regexp matches a string exactly when the octets represented by
+// that string match the header-name rule in 4.1.2. Note that - comes
+// first in the character set since it has special meaning otherwise.
+var VALID_HEADER_NAME_REGEXP = /^:?[-!#$%&'*+.^_`|~0-9a-z]+$/;
+
+// This regexp matches a string exactly when the octets represented by
+// that string conforms to (the expected future content of) 4.1.3.
+//
+// 4.1.3 says that header values must be "sequences of UTF-8 encoded
+// text". However, this will most likely change to allow arbitrary
+// octet sequences so we don't bother trying to check UTF-8 validity.
+var VALID_HEADER_VALUE_REGEXP = /^[\x00-\xff]*$/;
+
+// Returns whether the given sequence of octets (represented as a
+// string) matches the header-name rule in 4.1.2.
+function isValidHeaderName(str) {
+  return VALID_HEADER_NAME_REGEXP.test(str);
+}
+
+// Returns whether the given sequence of octets (represented as a
+// string) conforms to (the expected future content of) 4.1.3.
+function isValidHeaderValue(str) {
+  return VALID_HEADER_VALUE_REGEXP.test(str);
+}
+
 function HeaderTable() {
   this.entries_ = [];
   this.size_ = 0;
@@ -114,6 +144,10 @@ HeaderTable.prototype.getEntry = function(index) {
 }
 
 HeaderTable.prototype.findName = function(name) {
+  if (!isValidHeaderName(name)) {
+    throw new Error('Invalid header name: ' + name);
+  }
+
   for (var i = 0; i < this.entries_.length; ++i) {
     var entry = this.entries_[i];
     // TODO(akalin): Use constant-time string comparison.
@@ -125,6 +159,14 @@ HeaderTable.prototype.findName = function(name) {
 };
 
 HeaderTable.prototype.findNameAndValue = function(name, value) {
+  if (!isValidHeaderName(name)) {
+    throw new Error('Invalid header name: ' + name);
+  }
+
+  if (!isValidHeaderValue(value)) {
+    throw new Error('Invalid header value: ' + value);
+  }
+
   for (var i = 0; i < this.entries_.length; ++i) {
     var entry = this.entries_[i];
     // TODO(akalin): Use constant-time string comparison.
@@ -170,6 +212,14 @@ HeaderTable.prototype.forEachEntry = function(fn) {
 }
 
 HeaderTable.prototype.tryAppendEntry = function(name, value) {
+  if (!isValidHeaderName(name)) {
+    throw new Error('Invalid header name: ' + name);
+  }
+
+  if (!isValidHeaderValue(value)) {
+    throw new Error('Invalid header value: ' + value);
+  }
+
   var index = -1;
   var sizeDelta = name.length + value.length + 32;
   while (this.entries_.length > 0 && this.size_ + sizeDelta > this.maxSize_) {
@@ -184,6 +234,14 @@ HeaderTable.prototype.tryAppendEntry = function(name, value) {
 }
 
 HeaderTable.prototype.tryReplaceEntry = function(index, name, value) {
+  if (!isValidHeaderName(name)) {
+    throw new Error('Invalid header name: ' + name);
+  }
+
+  if (!isValidHeaderValue(value)) {
+    throw new Error('Invalid header value: ' + value);
+  }
+
   var entry = this.getEntry(index);
   var sizeDelta =
     (name.length + value.length + 32) -
