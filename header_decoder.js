@@ -180,12 +180,9 @@ HeaderDecoder.prototype.decodeHeaderSet = function(
   var self = this;
   this.encodingContext_.forEachEntry(
     function(index, name, value, referenced, touchCount) {
-      if (referenced) {
-        if (touchCount !== null) {
-          self.encodingContext_.clearTouches(index);
-        } else {
-          emitFunction(name, value);
-        }
+      if (referenced && (touchCount === null)) {
+        emitFunction(name, value);
       }
+      self.encodingContext_.clearTouches(index);
     });
 };
