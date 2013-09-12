@@ -8,6 +8,10 @@ Encoder.prototype.encodeOctet = function(o) {
   this.buffer_.push(o & 0xff);
 };
 
+// Encodes an integer I into the representation described in 4.1.1. N
+// is the number of bits of the prefix as described in 4.1.1, and
+// firstOctetMask is the mask that is or'ed with the first octet of
+// the encoding (which must have none of its lower N bits set).
 Encoder.prototype.encodeInteger = function(firstOctetMask, N, I) {
   var nextMarker = (1 << N) - 1;
 
@@ -30,19 +34,23 @@ Encoder.prototype.encodeInteger = function(firstOctetMask, N, I) {
   this.encodeOctet(I);
 }
 
-Encoder.prototype.encodeASCIIString = function(str) {
+// Encodes the given octet sequence represented by a string as a
+// length-prefixed octet sequence.
+Encoder.prototype.encodeOctetSequence = function(str) {
   this.encodeInteger(0, 0, str.length);
   for (var i = 0; i < str.length; ++i) {
     this.encodeOctet(str.charCodeAt(i));
   }
 }
 
+// Encode an indexed header as described in 4.2.
 Encoder.prototype.encodeIndexedHeader = function(index) {
   var opCode = 0x80;
   var prefixLength = 7;
   this.encodeInteger(opCode, prefixLength, index);
 }
 
+// Encode a literal header without indexing as described in 4.3.1.
 Encoder.prototype.encodeLiteralHeaderWithoutIndexing = function(
   indexOrName, value) {
   var opCode = 0x60;
@@ -50,19 +58,21 @@ Encoder.prototype.encodeLiteralHeaderWithoutIndexing = function(
   switch (typeof indexOrName) {
     case 'number':
       this.encodeInteger(opCode, prefixLength, indexOrName + 1);
-      this.encodeASCIIString(value);
+      this.encodeOctetSequence(value);
       return;
 
     case 'string':
       this.encodeInteger(opCode, prefixLength, 0);
-      this.encodeASCIIString(indexOrName);
-      this.encodeASCIIString(value);
+      this.encodeOctetSequence(indexOrName);
+      this.encodeOctetSequence(value);
       return;
   }
 
   throw new Error('not an index or name: ' + indexOrName);
 }
 
+// Encode a literal header with incremental indexing as described in
+// 4.3.2.
 Encoder.prototype.encodeLiteralHeaderWithIncrementalIndexing = function(
   indexOrName, value) {
   var opCode = 0x40;
@@ -70,19 +80,21 @@ Encoder.prototype.encodeLiteralHeaderWithIncrementalIndexing = function(
   switch (typeof indexOrName) {
     case 'number':
       this.encodeInteger(opCode, prefixLength, indexOrName + 1);
-      this.encodeASCIIString(value);
+      this.encodeOctetSequence(value);
       return;
 
     case 'string':
       this.encodeInteger(opCode, prefixLength, 0);
-      this.encodeASCIIString(indexOrName);
-      this.encodeASCIIString(value);
+      this.encodeOctetSequence(indexOrName);
+      this.encodeOctetSequence(value);
       return;
   }
 
   throw new Error('not an index or name: ' + indexOrName);
 }
 
+// Encode a literal header with substitution indexing as described in
+// 4.3.3.
 Encoder.prototype.encodeLiteralHeaderWithSubstitutionIndexing = function(
   indexOrName, substitutedIndex, value) {
   var opCode = 0x0;
@@ -91,14 +103,14 @@ Encoder.prototype.encodeLiteralHeaderWithSubstitutionIndexing = function(
     case 'number':
       this.encodeInteger(opCode, prefixLength, indexOrName + 1);
       this.encodeInteger(0, 0, substitutedIndex);
-      this.encodeASCIIString(value);
+      this.encodeOctetSequence(value);
       return;
 
     case 'string':
       this.encodeInteger(opCode, prefixLength, 0);
-      this.encodeASCIIString(indexOrName);
+      this.encodeOctetSequence(indexOrName);
       this.encodeInteger(0, 0, substitutedIndex);
-      this.encodeASCIIString(value);
+      this.encodeOctetSequence(value);
       return;
   }
 
