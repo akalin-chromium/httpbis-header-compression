@@ -50,7 +50,7 @@ Decoder.prototype.decodeNextInteger = function(N) {
   return I;
 };
 
-Decoder.prototype.decodeNextASCIIString = function() {
+Decoder.prototype.decodeNextString = function() {
   var length = this.decodeNextInteger(0);
   var str = '';
   for (var i = 0; i < length; ++i) {
@@ -64,12 +64,23 @@ Decoder.prototype.decodeNextName = function(N) {
   var indexPlusOneOrZero = this.decodeNextInteger(N);
   var name = null;
   if (indexPlusOneOrZero == 0) {
-    name = this.decodeNextASCIIString();
+    name = this.decodeNextString();
   } else {
     var index = indexPlusOneOrZero - 1;
     name = this.encodingContext_.getIndexedHeaderName(index);
   }
+  if (!isValidHeaderName(name)) {
+    throw new Error('Invalid header name: ' + name);
+  }
   return name;
+};
+
+Decoder.prototype.decodeNextValue = function() {
+  var value = this.decodeNextString();
+  if (!isValidHeaderValue(value)) {
+    throw new Error('Invalid header value: ' + value);
+  }
+  return value;
 };
 
 // Processes the next header representation as described in 3.2.1.
@@ -92,7 +103,7 @@ Decoder.prototype.processNextHeaderRepresentation = function() {
   if ((nextOctet >> 5) == 0x3) {
     // Literal header without indexing (4.3.1).
     var name = this.decodeNextName(5);
-    var value = this.decodeNextASCIIString();
+    var value = this.decodeNextValue();
     this.emitFunction_(name, value);
     return;
   }
@@ -100,7 +111,7 @@ Decoder.prototype.processNextHeaderRepresentation = function() {
   if ((nextOctet >> 5) == 0x2) {
     // Literal header with incremental indexing (4.3.2).
     var name = this.decodeNextName(5);
-    var value = this.decodeNextASCIIString();
+    var value = this.decodeNextValue();
     var index =
       this.encodingContext_.processLiteralHeaderWithIncrementalIndexing(
         name, value);
@@ -115,7 +126,7 @@ Decoder.prototype.processNextHeaderRepresentation = function() {
     // Literal header with substitution indexing (4.3.3).
     var name = this.decodeNextName(6);
     var substitutedIndex = this.decodeNextInteger(0);
-    var value = this.decodeNextASCIIString();
+    var value = this.decodeNextValue();
     var index =
       this.encodingContext_.processLiteralHeaderWithSubstitutionIndexing(
         name, substitutedIndex, value);
