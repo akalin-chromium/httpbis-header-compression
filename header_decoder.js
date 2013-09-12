@@ -1,5 +1,7 @@
 'use strict';
 
+// emitFunction will be called with the name and value of each header
+// encountered while decoding.
 function Decoder(buffer, encodingContext, emitFunction) {
   this.buffer_ = buffer;
   this.i_ = 0;
@@ -7,12 +9,12 @@ function Decoder(buffer, encodingContext, emitFunction) {
   this.emitFunction_ = emitFunction;
 }
 
-Decoder.prototype.hasData = function() {
+Decoder.prototype.hasMoreData = function() {
   return this.i_ < this.buffer_.length;
 };
 
 Decoder.prototype.peekNextOctet_ = function() {
-  if (!this.hasData()) {
+  if (!this.hasMoreData()) {
     throw new Error('Unexpected end of buffer');
   }
   return this.buffer_[this.i_] & 0xff;
@@ -50,6 +52,8 @@ Decoder.prototype.decodeNextInteger_ = function(N) {
   return I;
 };
 
+// Decodes the next length-prefixed octet sequence and returns it as a
+// string with character codes representing the octets.
 Decoder.prototype.decodeNextString_ = function() {
   var length = this.decodeNextInteger_(0);
   var str = '';
@@ -60,6 +64,9 @@ Decoder.prototype.decodeNextString_ = function() {
   return str;
 };
 
+// Decodes the next header name based on the representation described
+// in 4.1.2. N is the number of bits of the prefix of the length of
+// the header name as described in 4.1.1.
 Decoder.prototype.decodeNextName_ = function(N) {
   var indexPlusOneOrZero = this.decodeNextInteger_(N);
   var name = null;
@@ -75,6 +82,8 @@ Decoder.prototype.decodeNextName_ = function(N) {
   return name;
 };
 
+// Decodes the next header value based on the representation described
+// in 4.1.3.
 Decoder.prototype.decodeNextValue_ = function() {
   var value = this.decodeNextString_();
   if (!isValidHeaderValue(value)) {
@@ -86,6 +95,8 @@ Decoder.prototype.decodeNextValue_ = function() {
 // Processes the next header representation as described in 3.2.1.
 Decoder.prototype.processNextHeaderRepresentation = function() {
   var nextOctet = this.peekNextOctet_();
+
+  // Touches are used below to track which headers have been emitted.
 
   if ((nextOctet >> 7) == 0x1) {
     // Indexed header (4.2).
@@ -140,6 +151,8 @@ Decoder.prototype.processNextHeaderRepresentation = function() {
   throw new Error('Could not decode opcode from ' + nextOctet);
 };
 
+// direction can be either REQUEST or RESPONSE, which controls the
+// initial header table to use.
 function HeaderDecoder(direction) {
   this.encodingContext_ = new EncodingContext(direction);
 }
@@ -148,11 +161,15 @@ HeaderDecoder.prototype.setHeaderTableMaxSize = function(maxSize) {
   this.encodingContext_.setHeaderTableMaxSize(maxSize);
 };
 
+// encodedHeaderSet must be the complete encoding of an header set,
+// represented as an array of octets. emitFunction will be called with
+// the name and value of each header in the header set. An exception
+// will be thrown if an error is encountered.
 HeaderDecoder.prototype.decodeHeaderSet = function(
   encodedHeaderSet, emitFunction) {
   var decoder =
     new Decoder(encodedHeaderSet, this.encodingContext_, emitFunction);
-  while (decoder.hasData()) {
+  while (decoder.hasMoreData()) {
     decoder.processNextHeaderRepresentation();
   }
 
