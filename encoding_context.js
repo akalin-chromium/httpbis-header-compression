@@ -100,7 +100,8 @@ HeaderTable.prototype.equals = function(other) {
     var entry = this.entries_[i];
     var otherEntry = other.entries_[i];
     // TODO(akalin): Compare names case-insensitively.
-    if (entry.name != otherEntry.name || entry.value != otherEntry.value) {
+    if (entry.name != otherEntry.name || entry.value != otherEntry.value ||
+        ('referenced' in entry) != ('referenced' in otherEntry)) {
       return false;
     }
   }
@@ -134,28 +135,28 @@ HeaderTable.prototype.findNameAndValue = function(name, value) {
   return null;
 };
 
-HeaderTable.prototype.hasReference = function(index) {
+HeaderTable.prototype.isReferenced = function(index) {
   var entry = this.getEntry(index);
   if (entry === null) {
     return null;
   }
-  return 'refCount' in entry;
+  return 'referenced' in entry;
 };
 
-HeaderTable.prototype.addReference = function(index) {
+HeaderTable.prototype.setReferenced = function(index) {
   var entry = this.getEntry(index);
   if (entry === null) {
     return null;
   }
-  entry.refCount = 1;
+  entry.referenced = true;
 };
 
-HeaderTable.prototype.removeReference = function(index) {
+HeaderTable.prototype.unsetReferenced = function(index) {
   var entry = this.getEntry(index);
   if (entry === null) {
     return null;
   }
-  delete entry.refCount;
+  delete entry.referenced;
 };
 
 HeaderTable.prototype.forEachEntry = function(fn) {
@@ -298,8 +299,8 @@ EncodingContext.prototype.equals = function(other) {
   return this.headerTable_.equals(other.headerTable_);
 };
 
-EncodingContext.prototype.hasReference = function(index) {
-  return this.headerTable_.hasReference(index);
+EncodingContext.prototype.isReferenced = function(index) {
+  return this.headerTable_.isReferenced(index);
 };
 
 EncodingContext.prototype.getIndexedHeaderName = function(index) {
@@ -331,11 +332,11 @@ EncodingContext.prototype.forEachEntry = function(fn) {
 }
 
 EncodingContext.prototype.processIndexedHeader = function(index) {
-  if (this.headerTable_.hasReference(index)) {
-    this.headerTable_.removeReference(index);
+  if (this.headerTable_.isReferenced(index)) {
+    this.headerTable_.unsetReferenced(index);
     return false;
   }
-  this.headerTable_.addReference(index);
+  this.headerTable_.setReferenced(index);
   return true;
 }
 
@@ -343,7 +344,7 @@ EncodingContext.prototype.processLiteralHeaderWithIncrementalIndexing =
 function(name, value) {
   var result = this.headerTable_.tryAppendEntry(name, value);
   if (result.index >= 0) {
-    this.headerTable_.addReference(result.index);
+    this.headerTable_.setReferenced(result.index);
   }
   return result;
 }
@@ -352,7 +353,7 @@ EncodingContext.prototype.processLiteralHeaderWithSubstitutionIndexing =
 function(name, substitutedIndex, value) {
   var result = this.headerTable_.tryReplaceEntry(substitutedIndex, name, value);
   if (result.index >= 0) {
-    this.headerTable_.addReference(result.index);
+    this.headerTable_.setReferenced(result.index);
   }
   return result;
 }

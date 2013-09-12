@@ -184,7 +184,7 @@ HeaderDecoder.prototype.decodeHeaderSet = function(
   }
   var self = this;
   this.encodingContext_.forEachEntry(function(index, name, value) {
-    if (self.encodingContext_.hasReference(index) &&
+    if (self.encodingContext_.isReferenced(index) &&
         !touched.hasReference(index)) {
       emitFunction(name, value);
     }

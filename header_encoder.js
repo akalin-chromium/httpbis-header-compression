@@ -130,7 +130,7 @@ HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
     if (this.compressionLevel_ > 1) {
       var nameValueIndex = this.encodingContext_.findNameAndValue(name, value);
       if (nameValueIndex !== null) {
-        if (this.encodingContext_.hasReference(nameValueIndex)) {
+        if (this.encodingContext_.isReferenced(nameValueIndex)) {
           var emittedCount = emitted.getReferenceCount(nameValueIndex);
           if (emittedCount === null) {
             emitted.addReference(nameValueIndex, 0);
@@ -200,7 +200,7 @@ HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
 
   var self = this;
   this.encodingContext_.forEachEntry(function(index, name, value) {
-    if (self.encodingContext_.hasReference(index) &&
+    if (self.encodingContext_.isReferenced(index) &&
         !emitted.hasReference(index)) {
       encoder.encodeIndexedHeader(index);
       self.encodingContext_.processIndexedHeader(index);
