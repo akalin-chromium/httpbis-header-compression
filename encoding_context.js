@@ -184,10 +184,10 @@ HeaderTable.prototype.tryAppendEntry = function(name, value) {
 }
 
 HeaderTable.prototype.tryReplaceEntry = function(index, name, value) {
-  var existingEntry = this.entries_[index];
+  var entry = this.getEntry(index);
   var sizeDelta =
     (name.length + value.length + 32) -
-    (existingEntry.name.length + existingEntry.value.length + 32);
+    (entry.name.length + entry.value.length + 32);
   while (this.entries_.length > 0 && this.size_ + sizeDelta > this.maxSize_) {
     --index;
     this.removeFirstEntry_();
