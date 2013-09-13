@@ -265,34 +265,6 @@ HeaderTable.prototype.findNameAndValue = function(name, value) {
   return -1;
 };
 
-HeaderTable.prototype.isReferenced = function(index) {
-  return this.getEntry(index).isReferenced();
-};
-
-HeaderTable.prototype.setReferenced = function(index) {
-  this.getEntry(index).setReferenced();
-};
-
-HeaderTable.prototype.unsetReferenced = function(index) {
-  this.getEntry(index).unsetReferenced();
-};
-
-// Returns how many times the header at the given entry has been
-// touched, or null if it hasn't been touched. Note that an entry can
-// be touched 0 times, which is distinct from it not having been
-// touched at all.
-HeaderTable.prototype.getTouchCount = function(index) {
-  return this.getEntry(index).getTouchCount();
-};
-
-HeaderTable.prototype.addTouches = function(index, touchCount) {
-  this.getEntry(index).addTouches(touchCount);
-};
-
-HeaderTable.prototype.clearTouches = function(index) {
-  this.getEntry(index).clearTouches();
-};
-
 // fn is called with the index, name, value, isReferenced, and
 // touchCount for each entry in order.
 HeaderTable.prototype.forEachEntry = function(fn) {
@@ -390,19 +362,19 @@ EncodingContext.prototype.equals = function(other) {
 };
 
 EncodingContext.prototype.isReferenced = function(index) {
-  return this.headerTable_.isReferenced(index);
+  return this.headerTable_.getEntry(index).isReferenced();
 };
 
 EncodingContext.prototype.getTouchCount = function(index) {
-  return this.headerTable_.getTouchCount(index);
+  return this.headerTable_.getEntry(index).getTouchCount();
 };
 
 EncodingContext.prototype.addTouches = function(index, touchCount) {
-  return this.headerTable_.addTouches(index, touchCount);
+  return this.headerTable_.getEntry(index).addTouches(touchCount);
 };
 
 EncodingContext.prototype.clearTouches = function(index) {
-  return this.headerTable_.clearTouches(index);
+  return this.headerTable_.getEntry(index).clearTouches();
 };
 
 EncodingContext.prototype.getIndexedHeaderName = function(index) {
@@ -427,10 +399,11 @@ EncodingContext.prototype.forEachEntry = function(fn) {
 }
 
 EncodingContext.prototype.processIndexedHeader = function(index) {
-  if (this.headerTable_.isReferenced(index)) {
-    this.headerTable_.unsetReferenced(index);
+  var entry = this.headerTable_.getEntry(index);
+  if (entry.isReferenced()) {
+    entry.unsetReferenced();
   } else {
-    this.headerTable_.setReferenced(index);
+    entry.setReferenced();
   }
 }
 
@@ -438,7 +411,7 @@ EncodingContext.prototype.processLiteralHeaderWithIncrementalIndexing =
 function(name, value) {
   var index = this.headerTable_.tryAppendEntry(name, value);
   if (index >= 0) {
-    this.headerTable_.setReferenced(index);
+    this.headerTable_.getEntry(index).setReferenced();
   }
   return index;
 }
@@ -447,7 +420,7 @@ EncodingContext.prototype.processLiteralHeaderWithSubstitutionIndexing =
 function(name, substitutedIndex, value) {
   var index = this.headerTable_.tryReplaceEntry(substitutedIndex, name, value);
   if (index >= 0) {
-    this.headerTable_.setReferenced(index);
+    this.headerTable_.getEntry(index).setReferenced();
   }
   return index;
 }
