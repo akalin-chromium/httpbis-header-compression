@@ -133,7 +133,6 @@ function stringsEqualConstantTime(str1, str2) {
   return x == 0;
 }
 
-// TODO(akalin): Move referenced and touchCount into this class.
 function HeaderTableEntry(name, value) {
   this.name = name;
   this.value = value;
@@ -154,6 +153,22 @@ HeaderTableEntry.prototype.setReferenced = function() {
 
 HeaderTableEntry.prototype.unsetReferenced = function() {
   delete this.referenced_;
+};
+
+// Returns how many times this entry has been touched, or null if it
+// hasn't been touched. Note that an entry can be touched 0 times,
+// which is distinct from it not having been touched at all.
+HeaderTableEntry.prototype.getTouchCount = function() {
+  return ('touchCount_' in this) ? this.touchCount_ : null;
+};
+
+HeaderTableEntry.prototype.addTouches = function(touchCount) {
+  this.touchCount_ = this.touchCount_ || 0;
+  this.touchCount_ += touchCount;
+};
+
+HeaderTableEntry.prototype.clearTouches = function() {
+  delete this.touchCount_;
 };
 
 // A data structure for both the header table (described in 3.1.2) and
@@ -191,8 +206,8 @@ HeaderTable.prototype.equals = function(other) {
     var otherEntry = other.entries_[i];
     if (!stringsEqualConstantTime(entry.name, otherEntry.name) ||
         !stringsEqualConstantTime(entry.value, otherEntry.value) ||
-        (entry.isReferenced(i) != otherEntry.isReferenced(i)) ||
-        (this.getTouchCount(i) != other.getTouchCount(i))) {
+        (entry.isReferenced() != otherEntry.isReferenced()) ||
+        (entry.getTouchCount() != otherEntry.getTouchCount())) {
       return false;
     }
   }
@@ -261,18 +276,15 @@ HeaderTable.prototype.unsetReferenced = function(index) {
 // be touched 0 times, which is distinct from it not having been
 // touched at all.
 HeaderTable.prototype.getTouchCount = function(index) {
-  var entry = this.getEntry(index);
-  return ('touchCount' in entry) ? entry.touchCount : null;
+  return this.getEntry(index).getTouchCount();
 };
 
 HeaderTable.prototype.addTouches = function(index, touchCount) {
-  var entry = this.getEntry(index);
-  entry.touchCount = entry.touchCount || 0;
-  entry.touchCount += touchCount;
+  this.getEntry(index).addTouches(touchCount);
 };
 
 HeaderTable.prototype.clearTouches = function(index) {
-  delete this.getEntry(index).touchCount;
+  this.getEntry(index).clearTouches();
 };
 
 // fn is called with the index, name, value, isReferenced, and
@@ -280,7 +292,7 @@ HeaderTable.prototype.clearTouches = function(index) {
 HeaderTable.prototype.forEachEntry = function(fn) {
   for (var i = 0; i < this.entries_.length; ++i) {
     var entry = this.entries_[i];
-    fn(i, entry.name, entry.value, this.isReferenced(i), this.getTouchCount(i));
+    fn(i, entry.name, entry.value, entry.isReferenced(), entry.getTouchCount());
   }
 }
 
