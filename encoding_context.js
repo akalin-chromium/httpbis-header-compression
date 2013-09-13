@@ -153,7 +153,7 @@ HeaderTableEntry.prototype.equals = function(other) {
   }
 
   return true;
-}
+};
 
 // This size calculation comes from 3.1.2.
 HeaderTableEntry.prototype.size = function() {
@@ -201,7 +201,7 @@ function HeaderTable() {
 HeaderTable.prototype.removeFirstEntry_ = function() {
   var firstEntry = this.entries_.shift();
   this.size_ -= firstEntry.size();
-}
+};
 
 // The draft doesn't specify which entries to evict when the max size
 // is lowered, so we just start from the beginning.
@@ -225,14 +225,14 @@ HeaderTable.prototype.equals = function(other) {
   }
 
   return true;
-}
+};
 
 HeaderTable.prototype.getEntry = function(index) {
   if (!(index in this.entries_)) {
     throw new Error('Invalid index ' + index);
   }
   return this.entries_[index];
-}
+};
 
 // Returns the index of the first header table entry with the given
 // name, or -1 if none exists.
@@ -278,7 +278,7 @@ HeaderTable.prototype.forEachEntry = function(fn) {
     var entry = this.entries_[i];
     fn(i, entry.name, entry.value, entry.isReferenced(), entry.getTouchCount());
   }
-}
+};
 
 // Tries to append a new entry with the given name and value. Returns
 // the index of the new entry if successful, or -1 if not.
@@ -305,7 +305,7 @@ HeaderTable.prototype.tryAppendEntry = function(name, value) {
     this.entries_.push(newEntry);
   }
   return index;
-}
+};
 
 // Tries to replace the entry at the given index with the given name
 // and value. Returns the index of the new or replaced entry if
@@ -342,7 +342,7 @@ HeaderTable.prototype.tryReplaceEntry = function(index, name, value) {
     index = -1;
   }
   return index;
-}
+};
 
 // direction can be either REQUEST or RESPONSE, which controls the
 // pre-defined header table to use.
@@ -388,23 +388,26 @@ EncodingContext.prototype.clearTouches = function(index) {
 
 EncodingContext.prototype.getIndexedHeaderName = function(index) {
   return this.headerTable_.getEntry(index).name;
-}
+};
 
 EncodingContext.prototype.getIndexedHeaderValue = function(index) {
   return this.headerTable_.getEntry(index).value;
-}
+};
 
 EncodingContext.prototype.findIndexWithName = function(name) {
   return this.headerTable_.findIndexWithName(name);
-}
+};
 
 EncodingContext.prototype.findIndexWithNameAndValue = function(name, value) {
   return this.headerTable_.findIndexWithNameAndValue(name, value);
-}
+};
 
 EncodingContext.prototype.forEachEntry = function(fn) {
   return this.headerTable_.forEachEntry(fn);
-}
+};
+
+// The functions below must be called when the corresponding operation
+// is done by the encoder/decoder.
 
 // This follows the process in 3.2.1.
 EncodingContext.prototype.processIndexedHeader = function(index) {
@@ -414,7 +417,7 @@ EncodingContext.prototype.processIndexedHeader = function(index) {
   } else {
     entry.setReferenced();
   }
-}
+};
 
 // Returns the index of the new entry if the header was successfully
 // indexed, or -1 if not.
@@ -426,7 +429,7 @@ function(name, value) {
     this.headerTable_.getEntry(index).setReferenced();
   }
   return index;
-}
+};
 
 // Returns the index of the existing or new entry (which isn't
 // necessarily substitutedIndex) if the header was successfully
@@ -439,4 +442,4 @@ function(name, substitutedIndex, value) {
     this.headerTable_.getEntry(index).setReferenced();
   }
   return index;
-}
+};
