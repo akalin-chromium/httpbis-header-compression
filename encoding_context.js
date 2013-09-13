@@ -21,6 +21,9 @@ var LITERAL_INCREMENTAL_N = 5;
 var LITERAL_SUBSTITUTION_OPCODE = 0x0;
 var LITERAL_SUBSTITUTION_N = 6;
 
+// Constants for the direction parameter to EncodingContext (which
+// controls which of the two pre-defined header tables below are
+// used).
 var REQUEST = 0;
 var RESPONSE = 1;
 
@@ -130,6 +133,10 @@ function stringsEqualConstantTime(str1, str2) {
   return x == 0;
 }
 
+// A data structure for both the header table (described in 3.1.2) and
+// the reference set (3.1.3). This structure also keeps track of how
+// many times a header has been 'touched', which is useful for both
+// encoding and decoding.
 function HeaderTable() {
   this.entries_ = [];
   this.size_ = 0;
@@ -141,6 +148,8 @@ HeaderTable.prototype.removeFirstEntry_ = function() {
   this.size_ -= firstEntry.name.length + firstEntry.value.length + 32;
 }
 
+// The draft doesn't specify which entries to evict when the max size
+// is lowered, so we just start from the beginning.
 HeaderTable.prototype.setMaxSize = function(maxSize) {
   this.maxSize_ = maxSize;
   while (this.size_ > this.maxSize_) {
@@ -159,7 +168,8 @@ HeaderTable.prototype.equals = function(other) {
     var otherEntry = other.entries_[i];
     if (!stringsEqualConstantTime(entry.name, otherEntry.name) ||
         !stringsEqualConstantTime(entry.value, otherEntry.value) ||
-        ('referenced' in entry) != ('referenced' in otherEntry)) {
+        (this.isReferenced(i) != other.isReferenced(i)) ||
+        (this.getTouchCount(i) != other.getTouchCount(i))) {
       return false;
     }
   }
@@ -174,6 +184,8 @@ HeaderTable.prototype.getEntry = function(index) {
   return this.entries_[index];
 }
 
+// Returns the index of the first header table entry with the given
+// name, or null if none exists.
 HeaderTable.prototype.findName = function(name) {
   if (!isValidHeaderName(name)) {
     throw new Error('Invalid header name: ' + name);
@@ -188,6 +200,8 @@ HeaderTable.prototype.findName = function(name) {
   return null;
 };
 
+// Returns the index of the first header table entry with the given
+// name and value, or null if none exists.
 HeaderTable.prototype.findNameAndValue = function(name, value) {
   if (!isValidHeaderName(name)) {
     throw new Error('Invalid header name: ' + name);
@@ -219,6 +233,10 @@ HeaderTable.prototype.unsetReferenced = function(index) {
   delete this.getEntry(index).referenced;
 };
 
+// Returns how many times the header at the given entry has been
+// touched, or null if it hasn't been touched. Note that an entry can
+// be touched 0 times, which is distinct from it not having been
+// touched at all.
 HeaderTable.prototype.getTouchCount = function(index) {
   var entry = this.getEntry(index);
   return ('touchCount' in entry) ? entry.touchCount : null;
@@ -234,6 +252,8 @@ HeaderTable.prototype.clearTouches = function(index) {
   delete this.getEntry(index).touchCount;
 };
 
+// fn is called with the index, name, value, isReferenced, and
+// touchCount for each entry in order.
 HeaderTable.prototype.forEachEntry = function(fn) {
   for (var i = 0; i < this.entries_.length; ++i) {
     var entry = this.entries_[i];
@@ -241,6 +261,8 @@ HeaderTable.prototype.forEachEntry = function(fn) {
   }
 }
 
+// Tries to append a new entry with the given name and value. Returns
+// the index of the new entry if successful, or -1 if not.
 HeaderTable.prototype.tryAppendEntry = function(name, value) {
   if (!isValidHeaderName(name)) {
     throw new Error('Invalid header name: ' + name);
@@ -263,6 +285,9 @@ HeaderTable.prototype.tryAppendEntry = function(name, value) {
   return index;
 }
 
+// Tries to replace the entry at the given index with the given name
+// and value. Returns the index of the new or replaced entry if
+// successful, or -1 if not.
 HeaderTable.prototype.tryReplaceEntry = function(index, name, value) {
   if (!isValidHeaderName(name)) {
     throw new Error('Invalid header name: ' + name);
@@ -295,6 +320,8 @@ HeaderTable.prototype.tryReplaceEntry = function(index, name, value) {
   return index;
 }
 
+// direction can be either REQUEST or RESPONSE, which controls the
+// pre-defined header table to use.
 function EncodingContext(direction) {
   this.headerTable_ = new HeaderTable();
 

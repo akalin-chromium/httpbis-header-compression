@@ -152,7 +152,7 @@ Decoder.prototype.processNextHeaderRepresentation = function() {
 };
 
 // direction can be either REQUEST or RESPONSE, which controls the
-// initial header table to use.
+// pre-defined header table to use.
 function HeaderDecoder(direction) {
   this.encodingContext_ = new EncodingContext(direction);
 }
