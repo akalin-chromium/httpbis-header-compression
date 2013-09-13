@@ -144,32 +144,43 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
     throw new Error('Invalid header value: ' + value);
   }
 
+  // Touches are used below to track how many times a header has been
+  // explicitly encoded.
+
   if (this.compressionLevel_ > 1) {
+    // Check to see if the header is already in the header table, and
+    // use the indexed header opcode if so.
     var nameValueIndex = this.encodingContext_.findNameAndValue(name, value);
     if (nameValueIndex !== null) {
       if (this.encodingContext_.isReferenced(nameValueIndex)) {
         var emittedCount =
           this.encodingContext_.getTouchCount(nameValueIndex);
         if (emittedCount === null) {
+          // Mark that we've encountered this header once but haven't
+          // explicitly encoded it (since it's in the reference set).
           this.encodingContext_.addTouches(nameValueIndex, 0);
         } else if (emittedCount == 0) {
-          encoder.encodeIndexedHeader(nameValueIndex);
-          this.encodingContext_.processIndexedHeader(nameValueIndex);
-          encoder.encodeIndexedHeader(nameValueIndex);
-          this.encodingContext_.processIndexedHeader(nameValueIndex);
-          encoder.encodeIndexedHeader(nameValueIndex);
-          this.encodingContext_.processIndexedHeader(nameValueIndex);
-          encoder.encodeIndexedHeader(nameValueIndex);
-          this.encodingContext_.processIndexedHeader(nameValueIndex);
+          // Toggle the index four times; twice for the previous time
+          // this header was encountered (when it wasn't explicitly
+          // encoded), and twice for this time.
+          for (var i = 0; i < 4; ++i) {
+            encoder.encodeIndexedHeader(nameValueIndex);
+            this.encodingContext_.processIndexedHeader(nameValueIndex);
+          }
           this.encodingContext_.addTouches(nameValueIndex, 2);
         } else {
-          encoder.encodeIndexedHeader(nameValueIndex);
-          this.encodingContext_.processIndexedHeader(nameValueIndex);
-          encoder.encodeIndexedHeader(nameValueIndex);
-          this.encodingContext_.processIndexedHeader(nameValueIndex);
+          // We've encoded this header once for each time this was
+          // encountered previously, so toggle the index just twice
+          // for this time.
+          for (var i = 0; i < 2; ++i) {
+            encoder.encodeIndexedHeader(nameValueIndex);
+            this.encodingContext_.processIndexedHeader(nameValueIndex);
+          }
           this.encodingContext_.addTouches(nameValueIndex, 1);
         }
       } else {
+        // Mark that we've encountered this header once and explicitly
+        // encoded it (since it wasn't in the reference set).
         encoder.encodeIndexedHeader(nameValueIndex);
         this.encodingContext_.processIndexedHeader(nameValueIndex);
         this.encodingContext_.addTouches(nameValueIndex, 1);
@@ -180,36 +191,39 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
 
   var index = null;
   if (this.compressionLevel_ > 0) {
+    // Check to see if the header name is already in the header table,
+    // and use its index if so.
     index = this.encodingContext_.findName(name);
   }
 
-  if (this.compressionLevel_ > 2) {
-    if (index !== null) {
-      encoder.encodeLiteralHeaderWithSubstitutionIndexing(
-        index, index, value);
-      index =
-        this.encodingContext_.processLiteralHeaderWithSubstitutionIndexing(
-          name, index, value);
-      if (index >= 0) {
-        this.encodingContext_.addTouches(index, 1);
-      }
-      return;
+  if ((this.compressionLevel_ > 2) && (index !== null)) {
+    // If the header name is already in the header table, use
+    // substitution indexing.
+    encoder.encodeLiteralHeaderWithSubstitutionIndexing(
+      index, index, value);
+    index =
+      this.encodingContext_.processLiteralHeaderWithSubstitutionIndexing(
+        name, index, value);
+    if (index >= 0) {
+      this.encodingContext_.addTouches(index, 1);
     }
+    return;
   }
 
-  if (this.compressionLevel_ > 3) {
-    if (index === null) {
-      index =
-        this.encodingContext_.processLiteralHeaderWithIncrementalIndexing(
-          name, value);
-      encoder.encodeLiteralHeaderWithIncrementalIndexing(name, value);
-      if (index >= 0) {
-        this.encodingContext_.addTouches(index, 1);
-      }
-      return;
+  if ((this.compressionLevel_ > 3) && (index === null)) {
+    // If the header name is not already in the header table, use
+    // incremental indexing.
+    index =
+      this.encodingContext_.processLiteralHeaderWithIncrementalIndexing(
+        name, value);
+    encoder.encodeLiteralHeaderWithIncrementalIndexing(name, value);
+    if (index >= 0) {
+      this.encodingContext_.addTouches(index, 1);
     }
+    return;
   }
 
+  // Don't index at all.
   var indexOrName = (index === null) ? name : index;
   encoder.encodeLiteralHeaderWithoutIndexing(indexOrName, value);
 };
