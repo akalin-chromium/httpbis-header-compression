@@ -132,92 +132,96 @@ HeaderEncoder.prototype.setHeaderTableMaxSize = function(maxSize) {
   this.encodingContext_.setHeaderTableMaxSize(maxSize);
 };
 
-HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
-  var encoder = new Encoder();
-  for (var i = 0; i < headerSet.length; ++i) {
-    var nameValuePair = headerSet[i];
-    var name = nameValuePair[0];
-    var value = nameValuePair[1];
-    if (!isValidHeaderName(name)) {
-      throw new Error('Invalid header name: ' + name);
-    }
+HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
+  if (!isValidHeaderName(name)) {
+    throw new Error('Invalid header name: ' + name);
+  }
 
-    if (!isValidHeaderValue(value)) {
-      throw new Error('Invalid header value: ' + value);
-    }
+  if (!isValidHeaderValue(value)) {
+    throw new Error('Invalid header value: ' + value);
+  }
 
-    if (this.compressionLevel_ > 1) {
-      var nameValueIndex = this.encodingContext_.findNameAndValue(name, value);
-      if (nameValueIndex !== null) {
-        if (this.encodingContext_.isReferenced(nameValueIndex)) {
-          var emittedCount =
-            this.encodingContext_.getTouchCount(nameValueIndex);
-          if (emittedCount === null) {
-            this.encodingContext_.addTouches(nameValueIndex, 0);
-          } else if (emittedCount == 0) {
-            encoder.encodeIndexedHeader(nameValueIndex);
-            this.encodingContext_.processIndexedHeader(nameValueIndex);
-            encoder.encodeIndexedHeader(nameValueIndex);
-            this.encodingContext_.processIndexedHeader(nameValueIndex);
-            encoder.encodeIndexedHeader(nameValueIndex);
-            this.encodingContext_.processIndexedHeader(nameValueIndex);
-            encoder.encodeIndexedHeader(nameValueIndex);
-            this.encodingContext_.processIndexedHeader(nameValueIndex);
-            this.encodingContext_.addTouches(nameValueIndex, 2);
-          } else {
-            encoder.encodeIndexedHeader(nameValueIndex);
-            this.encodingContext_.processIndexedHeader(nameValueIndex);
-            encoder.encodeIndexedHeader(nameValueIndex);
-            this.encodingContext_.processIndexedHeader(nameValueIndex);
-            this.encodingContext_.addTouches(nameValueIndex, 1);
-          }
+  if (this.compressionLevel_ > 1) {
+    var nameValueIndex = this.encodingContext_.findNameAndValue(name, value);
+    if (nameValueIndex !== null) {
+      if (this.encodingContext_.isReferenced(nameValueIndex)) {
+        var emittedCount =
+          this.encodingContext_.getTouchCount(nameValueIndex);
+        if (emittedCount === null) {
+          this.encodingContext_.addTouches(nameValueIndex, 0);
+        } else if (emittedCount == 0) {
+          encoder.encodeIndexedHeader(nameValueIndex);
+          this.encodingContext_.processIndexedHeader(nameValueIndex);
+          encoder.encodeIndexedHeader(nameValueIndex);
+          this.encodingContext_.processIndexedHeader(nameValueIndex);
+          encoder.encodeIndexedHeader(nameValueIndex);
+          this.encodingContext_.processIndexedHeader(nameValueIndex);
+          encoder.encodeIndexedHeader(nameValueIndex);
+          this.encodingContext_.processIndexedHeader(nameValueIndex);
+          this.encodingContext_.addTouches(nameValueIndex, 2);
         } else {
+          encoder.encodeIndexedHeader(nameValueIndex);
+          this.encodingContext_.processIndexedHeader(nameValueIndex);
           encoder.encodeIndexedHeader(nameValueIndex);
           this.encodingContext_.processIndexedHeader(nameValueIndex);
           this.encodingContext_.addTouches(nameValueIndex, 1);
         }
-        continue;
+      } else {
+        encoder.encodeIndexedHeader(nameValueIndex);
+        this.encodingContext_.processIndexedHeader(nameValueIndex);
+        this.encodingContext_.addTouches(nameValueIndex, 1);
       }
+      return;
     }
-
-    var index = null;
-    if (this.compressionLevel_ > 0) {
-      index = this.encodingContext_.findName(name);
-    }
-
-    if (this.compressionLevel_ > 2) {
-      if (index !== null) {
-        encoder.encodeLiteralHeaderWithSubstitutionIndexing(
-          index, index, value);
-        index =
-          this.encodingContext_.processLiteralHeaderWithSubstitutionIndexing(
-            name, index, value);
-        if (index >= 0) {
-          this.encodingContext_.addTouches(index, 1);
-        }
-        continue;
-      }
-    }
-
-    if (this.compressionLevel_ > 3) {
-      if (index === null) {
-        index =
-          this.encodingContext_.processLiteralHeaderWithIncrementalIndexing(
-            name, value);
-        encoder.encodeLiteralHeaderWithIncrementalIndexing(name, value);
-        if (index >= 0) {
-          this.encodingContext_.addTouches(index, 1);
-        }
-        continue;
-      }
-    }
-
-    var indexOrName = (index === null) ? name : index;
-    encoder.encodeLiteralHeaderWithoutIndexing(indexOrName, value);
   }
 
-  // Remove each header contained in the reference set that is not in
-  // the just-encoded header set.
+  var index = null;
+  if (this.compressionLevel_ > 0) {
+    index = this.encodingContext_.findName(name);
+  }
+
+  if (this.compressionLevel_ > 2) {
+    if (index !== null) {
+      encoder.encodeLiteralHeaderWithSubstitutionIndexing(
+        index, index, value);
+      index =
+        this.encodingContext_.processLiteralHeaderWithSubstitutionIndexing(
+          name, index, value);
+      if (index >= 0) {
+        this.encodingContext_.addTouches(index, 1);
+      }
+      return;
+    }
+  }
+
+  if (this.compressionLevel_ > 3) {
+    if (index === null) {
+      index =
+        this.encodingContext_.processLiteralHeaderWithIncrementalIndexing(
+          name, value);
+      encoder.encodeLiteralHeaderWithIncrementalIndexing(name, value);
+      if (index >= 0) {
+        this.encodingContext_.addTouches(index, 1);
+      }
+      return;
+    }
+  }
+
+  var indexOrName = (index === null) ? name : index;
+  encoder.encodeLiteralHeaderWithoutIndexing(indexOrName, value);
+};
+
+// The given header set is encoded as an array of octets which is then
+// returned. An exception will be thrown if an error is encountered.
+HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
+  var encoder = new Encoder();
+  for (var i = 0; i < headerSet.length; ++i) {
+    var nameValuePair = headerSet[i];
+    this.encodeHeader_(encoder, nameValuePair[0], nameValuePair[1]);
+  }
+
+  // Remove each header not in the just-encoded header set from the
+  // reference set.
   this.encodingContext_.forEachEntry(
     function(index, name, value, referenced, touchCount) {
       if (referenced && (touchCount === null)) {
