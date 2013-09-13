@@ -144,6 +144,18 @@ HeaderTableEntry.prototype.size = function() {
   return this.name.length + this.value.length + 32;
 };
 
+HeaderTableEntry.prototype.isReferenced = function() {
+  return 'referenced_' in this;
+};
+
+HeaderTableEntry.prototype.setReferenced = function() {
+  this.referenced_ = true;
+};
+
+HeaderTableEntry.prototype.unsetReferenced = function() {
+  delete this.referenced_;
+};
+
 // A data structure for both the header table (described in 3.1.2) and
 // the reference set (3.1.3). This structure also keeps track of how
 // many times a header has been 'touched', which is useful for both
@@ -179,7 +191,7 @@ HeaderTable.prototype.equals = function(other) {
     var otherEntry = other.entries_[i];
     if (!stringsEqualConstantTime(entry.name, otherEntry.name) ||
         !stringsEqualConstantTime(entry.value, otherEntry.value) ||
-        (this.isReferenced(i) != other.isReferenced(i)) ||
+        (entry.isReferenced(i) != otherEntry.isReferenced(i)) ||
         (this.getTouchCount(i) != other.getTouchCount(i))) {
       return false;
     }
@@ -233,15 +245,15 @@ HeaderTable.prototype.findNameAndValue = function(name, value) {
 };
 
 HeaderTable.prototype.isReferenced = function(index) {
-  return 'referenced' in this.getEntry(index);
+  return this.getEntry(index).isReferenced();
 };
 
 HeaderTable.prototype.setReferenced = function(index) {
-  this.getEntry(index).referenced = true;
+  this.getEntry(index).setReferenced();
 };
 
 HeaderTable.prototype.unsetReferenced = function(index) {
-  delete this.getEntry(index).referenced;
+  this.getEntry(index).unsetReferenced();
 };
 
 // Returns how many times the header at the given entry has been
