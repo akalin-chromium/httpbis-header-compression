@@ -138,6 +138,17 @@ function HeaderTableEntry(name, value) {
   this.value = value;
 }
 
+HeaderTableEntry.prototype.equals = function(other) {
+  if (!stringsEqualConstantTime(this.name, other.name) ||
+      !stringsEqualConstantTime(this.value, other.value) ||
+      (this.isReferenced() != other.isReferenced()) ||
+      (this.getTouchCount() != other.getTouchCount())) {
+    return false;
+  }
+
+  return true;
+}
+
 // This size calculation comes from 3.1.2.
 HeaderTableEntry.prototype.size = function() {
   return this.name.length + this.value.length + 32;
@@ -202,12 +213,7 @@ HeaderTable.prototype.equals = function(other) {
   }
 
   for (var i = 0; i < this.entries_.length; ++i) {
-    var entry = this.entries_[i];
-    var otherEntry = other.entries_[i];
-    if (!stringsEqualConstantTime(entry.name, otherEntry.name) ||
-        !stringsEqualConstantTime(entry.value, otherEntry.value) ||
-        (entry.isReferenced() != otherEntry.isReferenced()) ||
-        (entry.getTouchCount() != otherEntry.getTouchCount())) {
+    if (!this.entries_[i].equals(other.entries_[i])) {
       return false;
     }
   }
