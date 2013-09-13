@@ -133,6 +133,17 @@ function stringsEqualConstantTime(str1, str2) {
   return x == 0;
 }
 
+// TODO(akalin): Move referenced and touchCount into this class.
+function HeaderTableEntry(name, value) {
+  this.name = name;
+  this.value = value;
+}
+
+// This size calculation comes from 3.1.2.
+HeaderTableEntry.prototype.size = function() {
+  return this.name.length + this.value.length + 32;
+};
+
 // A data structure for both the header table (described in 3.1.2) and
 // the reference set (3.1.3). This structure also keeps track of how
 // many times a header has been 'touched', which is useful for both
@@ -145,7 +156,7 @@ function HeaderTable() {
 
 HeaderTable.prototype.removeFirstEntry_ = function() {
   var firstEntry = this.entries_.shift();
-  this.size_ -= firstEntry.name.length + firstEntry.value.length + 32;
+  this.size_ -= firstEntry.size();
 }
 
 // The draft doesn't specify which entries to evict when the max size
@@ -272,15 +283,18 @@ HeaderTable.prototype.tryAppendEntry = function(name, value) {
     throw new Error('Invalid header value: ' + value);
   }
 
+  // The algorithm used here is described in 3.2.4.
   var index = -1;
-  var sizeDelta = name.length + value.length + 32;
-  while (this.entries_.length > 0 && this.size_ + sizeDelta > this.maxSize_) {
+  var newEntry = new HeaderTableEntry(name, value);
+  var sizeDelta = newEntry.size();
+  while ((this.entries_.length > 0) &&
+         ((this.size_ + sizeDelta) > this.maxSize_)) {
     this.removeFirstEntry_();
   }
-  if (this.size_ + sizeDelta <= this.maxSize_) {
+  if ((this.size_ + sizeDelta) <= this.maxSize_) {
     this.size_ += sizeDelta;
     index = this.entries_.length;
-    this.entries_.push({ name: name, value: value });
+    this.entries_.push(newEntry);
   }
   return index;
 }
@@ -297,17 +311,19 @@ HeaderTable.prototype.tryReplaceEntry = function(index, name, value) {
     throw new Error('Invalid header value: ' + value);
   }
 
-  var entry = this.getEntry(index);
-  var sizeDelta =
-    (name.length + value.length + 32) -
-    (entry.name.length + entry.value.length + 32);
-  while (this.entries_.length > 0 && this.size_ + sizeDelta > this.maxSize_) {
+  // The algorithm used here is described in 3.2.4.
+  var newEntry = new HeaderTableEntry(name, value);
+  var sizeDelta = newEntry.size() - this.getEntry(index).size();
+  while ((this.entries_.length > 0) &&
+         (this.size_ + sizeDelta) > this.maxSize_) {
     --index;
+    if (index < 0) {
+      sizeDelta = newEntry.size();
+    }
     this.removeFirstEntry_();
   }
-  if (this.size_ + sizeDelta <= this.maxSize_) {
+  if ((this.size_ + sizeDelta) <= this.maxSize_) {
     this.size_ += sizeDelta;
-    var newEntry = { name: name, value: value };
     if (index >= 0) {
       this.entries_[index] = newEntry;
     } else {
