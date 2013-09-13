@@ -385,9 +385,8 @@ EncodingContext.prototype.getIndexedHeaderName = function(index) {
   return this.headerTable_.getEntry(index).name;
 }
 
-EncodingContext.prototype.getIndexedHeaderNameAndValue = function(index) {
-  var entry = this.headerTable_.getEntry(index);
-  return { name: entry.name, value: entry.value };
+EncodingContext.prototype.getIndexedHeaderValue = function(index) {
+  return this.headerTable_.getEntry(index).value;
 }
 
 EncodingContext.prototype.findName = function(name) {

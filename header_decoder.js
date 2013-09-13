@@ -106,8 +106,9 @@ Decoder.prototype.processNextHeaderRepresentation = function() {
       return;
     }
     this.encodingContext_.addTouches(index, 0);
-    var result = this.encodingContext_.getIndexedHeaderNameAndValue(index);
-    this.emitFunction_(result.name, result.value);
+    var name = this.encodingContext_.getIndexedHeaderName(index);
+    var value = this.encodingContext_.getIndexedHeaderValue(index);
+    this.emitFunction_(name, value);
     return;
   }
 
