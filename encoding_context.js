@@ -133,6 +133,10 @@ function stringsEqualConstantTime(str1, str2) {
   return x == 0;
 }
 
+// A structure for an entry in the header table (3.1.2) and the
+// reference set (3.1.3). This structure also keeps track of how many
+// times a header has been 'touched', which is useful for both
+// encoding and decoding.
 function HeaderTableEntry(name, value) {
   this.name = name;
   this.value = value;
