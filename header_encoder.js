@@ -151,7 +151,8 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
   if (this.compressionLevel_ > 1) {
     // Check to see if the header is already in the header table, and
     // use the indexed header opcode if so.
-    var nameValueIndex = this.encodingContext_.findNameAndValue(name, value);
+    var nameValueIndex =
+      this.encodingContext_.findIndexWithNameAndValue(name, value);
     if (nameValueIndex >= 0) {
       if (this.encodingContext_.isReferenced(nameValueIndex)) {
         var emittedCount =
@@ -194,7 +195,7 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
   if (this.compressionLevel_ > 0) {
     // Check to see if the header name is already in the header table,
     // and use its index if so.
-    index = this.encodingContext_.findName(name);
+    index = this.encodingContext_.findIndexWithName(name);
   }
 
   if ((this.compressionLevel_ > 2) && (index >= 0)) {

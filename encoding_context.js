@@ -234,7 +234,7 @@ HeaderTable.prototype.getEntry = function(index) {
 
 // Returns the index of the first header table entry with the given
 // name, or -1 if none exists.
-HeaderTable.prototype.findName = function(name) {
+HeaderTable.prototype.findIndexWithName = function(name) {
   if (!isValidHeaderName(name)) {
     throw new Error('Invalid header name: ' + name);
   }
@@ -250,7 +250,7 @@ HeaderTable.prototype.findName = function(name) {
 
 // Returns the index of the first header table entry with the given
 // name and value, or -1 if none exists.
-HeaderTable.prototype.findNameAndValue = function(name, value) {
+HeaderTable.prototype.findIndexWithNameAndValue = function(name, value) {
   if (!isValidHeaderName(name)) {
     throw new Error('Invalid header name: ' + name);
   }
@@ -389,12 +389,12 @@ EncodingContext.prototype.getIndexedHeaderValue = function(index) {
   return this.headerTable_.getEntry(index).value;
 }
 
-EncodingContext.prototype.findName = function(name) {
-  return this.headerTable_.findName(name);
+EncodingContext.prototype.findIndexWithName = function(name) {
+  return this.headerTable_.findIndexWithName(name);
 }
 
-EncodingContext.prototype.findNameAndValue = function(name, value) {
-  return this.headerTable_.findNameAndValue(name, value);
+EncodingContext.prototype.findIndexWithNameAndValue = function(name, value) {
+  return this.headerTable_.findIndexWithNameAndValue(name, value);
 }
 
 EncodingContext.prototype.forEachEntry = function(fn) {
