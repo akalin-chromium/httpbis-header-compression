@@ -123,6 +123,9 @@ Encoder.prototype.flush = function() {
   return buffer;
 }
 
+// direction can be either REQUEST or RESPONSE, which controls the
+// initial header table to use. The higher compressionLevel is, the
+// more this encoder tries to exercise the various encoding opcodes.
 function HeaderEncoder(direction, compressionLevel) {
   this.encodingContext_ = new EncodingContext(direction);
   this.compressionLevel_ = compressionLevel;
