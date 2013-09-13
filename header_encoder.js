@@ -43,6 +43,9 @@ Encoder.prototype.encodeOctetSequence = function(str) {
   }
 }
 
+// All parameters to the encode functions below are assumed to be
+// valid.
+
 // Encode an indexed header as described in 4.2.
 Encoder.prototype.encodeIndexedHeader = function(index) {
   this.encodeInteger(INDEX_OPCODE, INDEX_N, index);
@@ -213,6 +216,8 @@ HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
     encoder.encodeLiteralHeaderWithoutIndexing(indexOrName, value);
   }
 
+  // Remove each header contained in the reference set that is not in
+  // the just-encoded header set.
   this.encodingContext_.forEachEntry(
     function(index, name, value, referenced, touchCount) {
       if (referenced && (touchCount === null)) {
