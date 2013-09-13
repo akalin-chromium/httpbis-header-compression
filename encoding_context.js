@@ -185,7 +185,7 @@ HeaderTable.prototype.getEntry = function(index) {
 }
 
 // Returns the index of the first header table entry with the given
-// name, or null if none exists.
+// name, or -1 if none exists.
 HeaderTable.prototype.findName = function(name) {
   if (!isValidHeaderName(name)) {
     throw new Error('Invalid header name: ' + name);
@@ -197,11 +197,11 @@ HeaderTable.prototype.findName = function(name) {
       return i;
     }
   }
-  return null;
+  return -1;
 };
 
 // Returns the index of the first header table entry with the given
-// name and value, or null if none exists.
+// name and value, or -1 if none exists.
 HeaderTable.prototype.findNameAndValue = function(name, value) {
   if (!isValidHeaderName(name)) {
     throw new Error('Invalid header name: ' + name);
@@ -218,7 +218,7 @@ HeaderTable.prototype.findNameAndValue = function(name, value) {
       return i;
     }
   }
-  return null;
+  return -1;
 };
 
 HeaderTable.prototype.isReferenced = function(index) {

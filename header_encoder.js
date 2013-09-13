@@ -152,7 +152,7 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
     // Check to see if the header is already in the header table, and
     // use the indexed header opcode if so.
     var nameValueIndex = this.encodingContext_.findNameAndValue(name, value);
-    if (nameValueIndex !== null) {
+    if (nameValueIndex >= 0) {
       if (this.encodingContext_.isReferenced(nameValueIndex)) {
         var emittedCount =
           this.encodingContext_.getTouchCount(nameValueIndex);
@@ -190,14 +190,14 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
     }
   }
 
-  var index = null;
+  var index = -1;
   if (this.compressionLevel_ > 0) {
     // Check to see if the header name is already in the header table,
     // and use its index if so.
     index = this.encodingContext_.findName(name);
   }
 
-  if ((this.compressionLevel_ > 2) && (index !== null)) {
+  if ((this.compressionLevel_ > 2) && (index >= 0)) {
     // If the header name is already in the header table, use
     // substitution indexing.
     encoder.encodeLiteralHeaderWithSubstitutionIndexing(
@@ -211,7 +211,7 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
     return;
   }
 
-  if ((this.compressionLevel_ > 3) && (index === null)) {
+  if ((this.compressionLevel_ > 3) && (index < 0)) {
     // If the header name is not already in the header table, use
     // incremental indexing.
     index =
@@ -225,7 +225,7 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
   }
 
   // Don't index at all.
-  var indexOrName = (index === null) ? name : index;
+  var indexOrName = (index >= 0) ? index : name;
   encoder.encodeLiteralHeaderWithoutIndexing(indexOrName, value);
 };
 
