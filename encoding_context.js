@@ -409,8 +409,8 @@ EncodingContext.prototype.forEachEntry = function(fn) {
 // The functions below must be called when the corresponding operation
 // is done by the encoder/decoder.
 
-// This follows the process in 3.2.1.
 EncodingContext.prototype.processIndexedHeader = function(index) {
+// This follows the process described in 3.2.1.
   var entry = this.headerTable_.getEntry(index);
   if (entry.isReferenced()) {
     entry.unsetReferenced();
@@ -423,7 +423,7 @@ EncodingContext.prototype.processIndexedHeader = function(index) {
 // indexed, or -1 if not.
 EncodingContext.prototype.processLiteralHeaderWithIncrementalIndexing =
 function(name, value) {
-  // This follows the process in 3.2.1.
+  // This follows the process described in 3.2.1.
   var index = this.headerTable_.tryAppendEntry(name, value);
   if (index >= 0) {
     this.headerTable_.getEntry(index).setReferenced();
@@ -436,7 +436,7 @@ function(name, value) {
 // indexed, or -1 if not.
 EncodingContext.prototype.processLiteralHeaderWithSubstitutionIndexing =
 function(name, substitutedIndex, value) {
-  // This follows the process in 3.2.1.
+  // This follows the process described in 3.2.1.
   var index = this.headerTable_.tryReplaceEntry(substitutedIndex, name, value);
   if (index >= 0) {
     this.headerTable_.getEntry(index).setReferenced();
