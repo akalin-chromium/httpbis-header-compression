@@ -27,6 +27,7 @@ var LITERAL_SUBSTITUTION_N = 6;
 var REQUEST = 0;
 var RESPONSE = 1;
 
+// From B.1.
 var PRE_DEFINED_REQUEST_HEADER_TABLE = [
   [ ':scheme',             'http'  ],  // 0
   [ ':scheme',             'https' ],  // 1
@@ -60,6 +61,7 @@ var PRE_DEFINED_REQUEST_HEADER_TABLE = [
   [ 'via',                 ''      ]   // 29
 ];
 
+// From B.2.
 var PRE_DEFINED_RESPONSE_HEADER_TABLE = [
   [ ':status',                     '200' ],  // 0
   [ 'age',                         ''    ],  // 1
@@ -345,6 +347,9 @@ HeaderTable.prototype.tryReplaceEntry = function(index, name, value) {
 // direction can be either REQUEST or RESPONSE, which controls the
 // pre-defined header table to use.
 function EncodingContext(direction) {
+  // As described in 3.1.1, the encoding context contains a header
+  // table and a reference set. Since HeaderTable already has the
+  // functionality of a reference set, that's the only thing we need.
   this.headerTable_ = new HeaderTable();
 
   var initialHeaderTable =
