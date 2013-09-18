@@ -205,7 +205,9 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
       index, index, value);
     index =
       this.encodingContext_.processLiteralHeaderWithSubstitutionIndexing(
-        name, index, value);
+        name, index, value, function(referenceIndex) {
+          throw new Error('Unimplemented');
+        });
     if (index >= 0) {
       this.encodingContext_.addTouches(index, 1);
     }
@@ -217,7 +219,9 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
     // incremental indexing.
     index =
       this.encodingContext_.processLiteralHeaderWithIncrementalIndexing(
-        name, value);
+        name, value, function(referenceIndex) {
+          throw new Error('Unimplemented');
+        });
     encoder.encodeLiteralHeaderWithIncrementalIndexing(name, value);
     if (index >= 0) {
       this.encodingContext_.addTouches(index, 1);

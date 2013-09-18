@@ -126,7 +126,7 @@ Decoder.prototype.processNextHeaderRepresentation = function() {
     var value = this.decodeNextValue_();
     var index =
       this.encodingContext_.processLiteralHeaderWithIncrementalIndexing(
-        name, value);
+        name, value, function(referenceIndex) { /* Do nothing */ });
     if (index >= 0) {
       this.encodingContext_.addTouches(index, 0);
     }
@@ -141,7 +141,8 @@ Decoder.prototype.processNextHeaderRepresentation = function() {
     var value = this.decodeNextValue_();
     var index =
       this.encodingContext_.processLiteralHeaderWithSubstitutionIndexing(
-        name, substitutedIndex, value);
+        name, substitutedIndex, value,
+        function(referenceIndex) { /* Do nothing */ });
     if (index >= 0) {
       this.encodingContext_.addTouches(index, 0);
     }

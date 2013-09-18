@@ -281,8 +281,12 @@ HeaderTable.prototype.forEachEntry = function(fn) {
 };
 
 // Tries to append a new entry with the given name and value. Returns
-// the index of the new entry if successful, or -1 if not.
-HeaderTable.prototype.tryAppendEntry = function(name, value) {
+// the index of the new entry if successful, or -1 if
+// not. onReferenceSetRemovalFn is called with the index of every
+// entry in the reference set that will be removed, before any of them
+// are removed.
+HeaderTable.prototype.tryAppendEntry = function(
+  name, value, onReferenceSetRemovalFn) {
   if (!isValidHeaderName(name)) {
     throw new Error('Invalid header name: ' + name);
   }
@@ -303,6 +307,11 @@ HeaderTable.prototype.tryAppendEntry = function(name, value) {
     ++numToShift;
   }
   for (var i = 0; i < numToShift; ++i) {
+    if (this.entries_[i].isReferenced()) {
+      onReferenceSetRemovalFn(i);
+    }
+  }
+  for (var i = 0; i < numToShift; ++i) {
     this.entries_.shift();
   }
   this.size_ = sizeAfterShift;
@@ -316,8 +325,11 @@ HeaderTable.prototype.tryAppendEntry = function(name, value) {
 
 // Tries to replace the entry at the given index with the given name
 // and value. Returns the index of the new or replaced entry if
-// successful, or -1 if not.
-HeaderTable.prototype.tryReplaceEntry = function(index, name, value) {
+// successful, or -1 if not. onReferenceSetRemovalFn is called with
+// the index of every entry in the reference set that will be removed,
+// before any of them are removed.
+HeaderTable.prototype.tryReplaceEntry = function(
+  index, name, value, onReferenceSetRemovalFn) {
   if (!isValidHeaderName(name)) {
     throw new Error('Invalid header name: ' + name);
   }
@@ -340,6 +352,11 @@ HeaderTable.prototype.tryReplaceEntry = function(index, name, value) {
       // adjust sizeDelta to account for the fact that we will now
       // prepend the new entry.
       sizeDelta = newEntry.size();
+    }
+  }
+  for (var i = 0; i < numToShift; ++i) {
+    if (this.entries_[i].isReferenced()) {
+      onReferenceSetRemovalFn(i);
     }
   }
   for (var i = 0; i < numToShift; ++i) {
@@ -375,7 +392,10 @@ function EncodingContext(direction) {
     PRE_DEFINED_RESPONSE_HEADER_TABLE;
   for (var i = 0; i < initialHeaderTable.length; ++i) {
     var nameValuePair = initialHeaderTable[i];
-    this.headerTable_.tryAppendEntry(nameValuePair[0], nameValuePair[1]);
+    this.headerTable_.tryAppendEntry(
+      nameValuePair[0], nameValuePair[1], function(referenceIndex) {
+        throw new Error('Unexpected removal from reference set');
+      });
   }
 }
 
@@ -437,11 +457,14 @@ EncodingContext.prototype.processIndexedHeader = function(index) {
 };
 
 // Returns the index of the new entry if the header was successfully
-// indexed, or -1 if not.
+// indexed, or -1 if not. onReferenceSetRemovalFn is called with the
+// index of every entry in the reference set that will be removed,
+// before any of them are removed.
 EncodingContext.prototype.processLiteralHeaderWithIncrementalIndexing =
-function(name, value) {
+function(name, value, onReferenceSetRemovalFn) {
   // This follows the process described in 3.2.1.
-  var index = this.headerTable_.tryAppendEntry(name, value);
+  var index = this.headerTable_.tryAppendEntry(
+    name, value, onReferenceSetRemovalFn);
   if (index >= 0) {
     this.headerTable_.getEntry(index).setReferenced();
   }
@@ -450,11 +473,14 @@ function(name, value) {
 
 // Returns the index of the existing or new entry (which isn't
 // necessarily substitutedIndex) if the header was successfully
-// indexed, or -1 if not.
+// indexed, or -1 if not. onReferenceSetRemovalFn is called with the
+// index of every entry in the reference set that will be removed,
+// before any of them are removed.
 EncodingContext.prototype.processLiteralHeaderWithSubstitutionIndexing =
-function(name, substitutedIndex, value) {
+function(name, substitutedIndex, value, onReferenceSetRemovalFn) {
   // This follows the process described in 3.2.1.
-  var index = this.headerTable_.tryReplaceEntry(substitutedIndex, name, value);
+  var index = this.headerTable_.tryReplaceEntry(
+    substitutedIndex, name, value, onReferenceSetRemovalFn);
   if (index >= 0) {
     this.headerTable_.getEntry(index).setReferenced();
   }
