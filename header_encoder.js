@@ -148,6 +148,24 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
   // Touches are used below to track how many times a header has been
   // explicitly encoded.
 
+  // Utility function to explicitly emit an entry in the reference
+  // set. The entry must already be touched.
+  var explicitlyEmitReferenceIndex = function(referenceIndex) {
+    if (!this.encodingContext_.isReferenced(referenceIndex)) {
+      throw new Error('Trying to explicitly emit entry ' + referenceIndex +
+                      ' not in reference set');
+    }
+    if (this.encodingContext_.getTouchCount(referenceIndex) === null) {
+      throw new Error('Trying to explicitly emit untouched entry ' +
+                      referenceIndex);
+    }
+    for (var i = 0; i < 2; ++i) {
+      encoder.encodeIndexedHeader(referenceIndex);
+      this.encodingContext_.processIndexedHeader(referenceIndex);
+    }
+    this.encodingContext_.addTouches(referenceIndex, 1);
+  }.bind(this);
+
   if (this.compressionLevel_ > 1) {
     // Check to see if the header is already in the header table, and
     // use the indexed header opcode if so.
@@ -162,23 +180,17 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
           // explicitly encoded it (since it's in the reference set).
           this.encodingContext_.addTouches(nameValueIndex, 0);
         } else if (emittedCount == 0) {
-          // Toggle the index four times; twice for the previous time
-          // this header was encountered (when it wasn't explicitly
-          // encoded), and twice for this time.
-          for (var i = 0; i < 4; ++i) {
-            encoder.encodeIndexedHeader(nameValueIndex);
-            this.encodingContext_.processIndexedHeader(nameValueIndex);
+          // Explicitly emit the entry twice; once for the previous
+          // time this header was encountered (when it wasn't
+          // explicitly encoded), and one for this time.
+          for (var i = 0; i < 2; ++i) {
+            explicitlyEmitReferenceIndex(nameValueIndex);
           }
-          this.encodingContext_.addTouches(nameValueIndex, 2);
         } else {
           // We've encoded this header once for each time this was
-          // encountered previously, so toggle the index just twice
-          // for this time.
-          for (var i = 0; i < 2; ++i) {
-            encoder.encodeIndexedHeader(nameValueIndex);
-            this.encodingContext_.processIndexedHeader(nameValueIndex);
-          }
-          this.encodingContext_.addTouches(nameValueIndex, 1);
+          // encountered previously, so emit the index just once for
+          // this time.
+          explicitlyEmitReferenceIndex(nameValueIndex);
         }
       } else {
         // Mark that we've encountered this header once and explicitly
@@ -207,11 +219,7 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
           if (this.encodingContext_.getTouchCount(referenceIndex) == 0) {
             // The implicitly emitted entry at referenceIndex will be
             // removed, so explicitly emit it.
-            for (var i = 0; i < 2; ++i) {
-              encoder.encodeIndexedHeader(referenceIndex);
-              this.encodingContext_.processIndexedHeader(referenceIndex);
-            }
-            this.encodingContext_.addTouches(referenceIndex, 1);
+            explicitlyEmitReferenceIndex(referenceIndex);
           }
         }.bind(this));
     encoder.encodeLiteralHeaderWithSubstitutionIndexing(
@@ -231,11 +239,7 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
           if (this.encodingContext_.getTouchCount(referenceIndex) == 0) {
             // The implicitly emitted entry at referenceIndex will be
             // removed, so explicitly emit it.
-            for (var i = 0; i < 2; ++i) {
-              encoder.encodeIndexedHeader(referenceIndex);
-              this.encodingContext_.processIndexedHeader(referenceIndex);
-            }
-            this.encodingContext_.addTouches(referenceIndex, 1);
+            explicitlyEmitReferenceIndex(referenceIndex);
           }
         }.bind(this));
     encoder.encodeLiteralHeaderWithIncrementalIndexing(name, value);
