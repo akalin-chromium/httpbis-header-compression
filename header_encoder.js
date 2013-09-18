@@ -201,13 +201,13 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
   if ((this.compressionLevel_ > 2) && (index >= 0)) {
     // If the header name is already in the header table, use
     // substitution indexing.
-    encoder.encodeLiteralHeaderWithSubstitutionIndexing(
-      index, index, value);
     index =
       this.encodingContext_.processLiteralHeaderWithSubstitutionIndexing(
         name, index, value, function(referenceIndex) {
           throw new Error('Unimplemented');
         });
+    encoder.encodeLiteralHeaderWithSubstitutionIndexing(
+      index, index, value);
     if (index >= 0) {
       this.encodingContext_.addTouches(index, 1);
     }
