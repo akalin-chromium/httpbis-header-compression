@@ -210,18 +210,22 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
     index = this.encodingContext_.findIndexWithName(name);
   }
 
+  // Used below when processing literal headers that may evict entries
+  // in the reference set.
+  var onReferenceSetRemoval = function(referenceIndex) {
+    if (this.encodingContext_.getTouchCount(referenceIndex) == 0) {
+      // The implicitly emitted entry at referenceIndex will be
+      // removed, so explicitly emit it.
+      explicitlyEmitReferenceIndex(referenceIndex);
+    }
+  }.bind(this);
+
   if ((this.compressionLevel_ > 2) && (index >= 0)) {
     // If the header name is already in the header table, use
     // substitution indexing.
     index =
       this.encodingContext_.processLiteralHeaderWithSubstitutionIndexing(
-        name, index, value, function(referenceIndex) {
-          if (this.encodingContext_.getTouchCount(referenceIndex) == 0) {
-            // The implicitly emitted entry at referenceIndex will be
-            // removed, so explicitly emit it.
-            explicitlyEmitReferenceIndex(referenceIndex);
-          }
-        }.bind(this));
+        name, index, value, onReferenceSetRemoval);
     encoder.encodeLiteralHeaderWithSubstitutionIndexing(
       index, index, value);
     if (index >= 0) {
@@ -235,13 +239,7 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
     // incremental indexing.
     index =
       this.encodingContext_.processLiteralHeaderWithIncrementalIndexing(
-        name, value, function(referenceIndex) {
-          if (this.encodingContext_.getTouchCount(referenceIndex) == 0) {
-            // The implicitly emitted entry at referenceIndex will be
-            // removed, so explicitly emit it.
-            explicitlyEmitReferenceIndex(referenceIndex);
-          }
-        }.bind(this));
+        name, value, onReferenceSetRemoval);
     encoder.encodeLiteralHeaderWithIncrementalIndexing(name, value);
     if (index >= 0) {
       this.encodingContext_.addTouches(index, 1);
