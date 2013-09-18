@@ -295,10 +295,17 @@ HeaderTable.prototype.tryAppendEntry = function(name, value) {
   var index = -1;
   var newEntry = new HeaderTableEntry(name, value);
   var sizeDelta = newEntry.size();
-  while ((this.entries_.length > 0) &&
-         ((this.size_ + sizeDelta) > this.maxSize_)) {
-    this.removeFirstEntry_();
+  var numToShift = 0;
+  var sizeAfterShift = this.size_;
+  while ((numToShift < this.entries_.length) &&
+         ((sizeAfterShift + sizeDelta) > this.maxSize_)) {
+    sizeAfterShift -= this.entries_[numToShift].size();
+    ++numToShift;
   }
+  for (var i = 0; i < numToShift; ++i) {
+    this.entries_.shift();
+  }
+  this.size_ = sizeAfterShift;
   if ((this.size_ + sizeDelta) <= this.maxSize_) {
     this.size_ += sizeDelta;
     index = this.entries_.length;
@@ -322,14 +329,24 @@ HeaderTable.prototype.tryReplaceEntry = function(index, name, value) {
   // The algorithm used here is described in 3.2.4.
   var newEntry = new HeaderTableEntry(name, value);
   var sizeDelta = newEntry.size() - this.getEntry(index).size();
-  while ((this.entries_.length > 0) &&
-         (this.size_ + sizeDelta) > this.maxSize_) {
-    --index;
-    if (index < 0) {
+  var numToShift = 0;
+  var sizeAfterShift = this.size_;
+  while ((numToShift < this.entries_.length) &&
+         ((sizeAfterShift + sizeDelta) > this.maxSize_)) {
+    sizeAfterShift -= this.entries_[numToShift].size();
+    ++numToShift;
+    if (numToShift >= index) {
+      // We will shift off the entry to replace and so we need to
+      // adjust sizeDelta to account for the fact that we will now
+      // prepend the new entry.
       sizeDelta = newEntry.size();
     }
-    this.removeFirstEntry_();
   }
+  for (var i = 0; i < numToShift; ++i) {
+    this.entries_.shift();
+  }
+  index -= numToShift;
+  this.size_ = sizeAfterShift;
   if ((this.size_ + sizeDelta) <= this.maxSize_) {
     this.size_ += sizeDelta;
     if (index >= 0) {
