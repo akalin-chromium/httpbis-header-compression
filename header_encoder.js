@@ -204,8 +204,16 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
     index =
       this.encodingContext_.processLiteralHeaderWithSubstitutionIndexing(
         name, index, value, function(referenceIndex) {
-          throw new Error('Unimplemented');
-        });
+          if (this.encodingContext_.getTouchCount(referenceIndex) == 0) {
+            // The implicitly emitted entry at referenceIndex will be
+            // removed, so explicitly emit it.
+            for (var i = 0; i < 2; ++i) {
+              encoder.encodeIndexedHeader(referenceIndex);
+              this.encodingContext_.processIndexedHeader(referenceIndex);
+            }
+            this.encodingContext_.addTouches(referenceIndex, 1);
+          }
+        }.bind(this));
     encoder.encodeLiteralHeaderWithSubstitutionIndexing(
       index, index, value);
     if (index >= 0) {
@@ -220,8 +228,16 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
     index =
       this.encodingContext_.processLiteralHeaderWithIncrementalIndexing(
         name, value, function(referenceIndex) {
-          throw new Error('Unimplemented');
-        });
+          if (this.encodingContext_.getTouchCount(referenceIndex) == 0) {
+            // The implicitly emitted entry at referenceIndex will be
+            // removed, so explicitly emit it.
+            for (var i = 0; i < 2; ++i) {
+              encoder.encodeIndexedHeader(referenceIndex);
+              this.encodingContext_.processIndexedHeader(referenceIndex);
+            }
+            this.encodingContext_.addTouches(referenceIndex, 1);
+          }
+        }.bind(this));
     encoder.encodeLiteralHeaderWithIncrementalIndexing(name, value);
     if (index >= 0) {
       this.encodingContext_.addTouches(index, 1);
