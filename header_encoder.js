@@ -223,13 +223,12 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
   if ((this.compressionLevel_ > 2) && (index >= 0)) {
     // If the header name is already in the header table, use
     // substitution indexing.
-    index =
+    var storedIndex =
       this.encodingContext_.processLiteralHeaderWithSubstitutionIndexing(
         name, index, value, onReferenceSetRemoval);
-    encoder.encodeLiteralHeaderWithSubstitutionIndexing(
-      index, index, value);
-    if (index >= 0) {
-      this.encodingContext_.addTouches(index, 1);
+    encoder.encodeLiteralHeaderWithSubstitutionIndexing(index, index, value);
+    if (storedIndex >= 0) {
+      this.encodingContext_.addTouches(storedIndex, 1);
     }
     return;
   }
@@ -237,12 +236,12 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
   if ((this.compressionLevel_ > 3) && (index < 0)) {
     // If the header name is not already in the header table, use
     // incremental indexing.
-    index =
+    var storedIndex =
       this.encodingContext_.processLiteralHeaderWithIncrementalIndexing(
         name, value, onReferenceSetRemoval);
     encoder.encodeLiteralHeaderWithIncrementalIndexing(name, value);
-    if (index >= 0) {
-      this.encodingContext_.addTouches(index, 1);
+    if (storedIndex >= 0) {
+      this.encodingContext_.addTouches(storedIndex, 1);
     }
     return;
   }
