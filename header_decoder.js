@@ -134,22 +134,6 @@ Decoder.prototype.processNextHeaderRepresentation = function() {
     return;
   }
 
-  if ((nextOctet >> LITERAL_SUBSTITUTION_N) == LITERAL_SUBSTITUTION_OPCODE) {
-    // Literal header with substitution indexing (4.3.3).
-    var name = this.decodeNextName_(LITERAL_SUBSTITUTION_N);
-    var substitutedIndex = this.decodeNextInteger_(0);
-    var value = this.decodeNextValue_();
-    var index =
-      this.encodingContext_.processLiteralHeaderWithSubstitutionIndexing(
-        name, substitutedIndex, value,
-        function(referenceIndex) { /* Do nothing */ });
-    if (index >= 0) {
-      this.encodingContext_.addTouches(index, 0);
-    }
-    this.emitFunction_(name, value);
-    return;
-  }
-
   throw new Error('Could not decode opcode from ' + nextOctet);
 };
 

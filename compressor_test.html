@@ -1,3 +1,4 @@
+<script src="huffman.js"></script>
 <script src="encoding_context.js"></script>
 <script src="header_encoder.js"></script>
 <script src="header_decoder.js"></script>
@@ -12,13 +13,8 @@
 
 <br />
 
-<textarea id="intermediate" cols="124" rows="12">
-</textarea>
-
-<br />
-
 <textarea id="uncompressed" cols="60" rows="20">
-:host: www.google.com
+:authority: www.google.com
 :method: GET
 :path: /
 :scheme: https
@@ -29,10 +25,20 @@ accept-encoding: gzip,deflate,sdch
 accept-language: en-US,en;q=0.8
 cache-control: max-age=0
 custom-header: custom-value
-p3p: 
+p3p:
 user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.32 (KHTML, like Gecko) Chrome/27.0.1425.0 Safari/537.32
 </textarea>
+
 <textarea id="uncompressed2" cols="60" rows="20">
+</textarea>
+
+<!-- 70 = 16*3 + 2 + 16 + padding (For scrollbar)-->
+<textarea id="exampleOutput" cols="70" rows="20">
+</textarea>
+
+<br />
+
+<textarea id="intermediate" cols="124" rows="12">
 </textarea>
 
 <br />
@@ -56,6 +62,7 @@ var changeHeaderTableMaxSizeButton =
 var uncompressedTextarea = document.getElementById('uncompressed');
 var encoderContextTextarea = document.getElementById('encoderContext');
 var intermediateTextarea = document.getElementById('intermediate');
+var exampleTextarea = document.getElementById('exampleOutput');
 var compressedTextarea = document.getElementById('compressed');
 var decoderContextTextarea = document.getElementById('decoderContext');
 var uncompressed2Textarea = document.getElementById('uncompressed2');
@@ -66,14 +73,13 @@ var headerDecoder = new HeaderDecoder(REQUEST);
 function headerSetFromString(str) {
   var headerStrs = str.split('\n');
   return headerStrs.map(function(headerStr) {
-    var match = headerStr.match(/^(.*): *(.*)$/);
-    return match ? [match[1], match[2]] : null;
+    var match = headerStr.match(/^(:[^:]{1,}|[^:]{1,}):[ ]*([^ ]*)[ ]*$/);
+    return match ? [match[1].toLowerCase(), match[2]] : null;
   }).filter(function(e) {
     return e;
   });
 }
 
-// TODO(akalin): Handle lower-casing.
 function headerCompare(header1, header2) {
   if (header1[0] < header2[0]) {
     return -1;
@@ -96,7 +102,11 @@ function headerSetToString(headerSet) {
   headerSetCopy.sort(headerCompare);
   for (var i = 0; i < headerSetCopy.length; ++i) {
     var header = headerSetCopy[i];
-    str += header[0] + ': ' + header[1] + '\n';
+    str += header[0] + ':';
+    if (header[1]) {
+      str += ' ' + header[1];
+    }
+    str += '\n';
   }
   return str;
 }
@@ -133,6 +143,51 @@ function escapeOctets(octets) {
   return str;
 }
 
+function octetsToHex(octets) {
+  var str = '';
+  for (var i = 0; i < octets.length; ++i) {
+    var octet = octets[i];
+    if (octet < 16) {
+      str += '0';
+    }
+    str += '' + octet.toString(16) + ' ';
+  }
+  return str;
+}
+
+function formatCodebook(codebook) {
+  var output = '';
+  for (var i = 0; i < codebook.length; ++i) {
+    var code = codebook[i];
+    output += i + " " + code.code + " " + code.l + '\n';
+  }
+  return output;
+}
+
+function octetsToExampleString(octets) {
+  var slice_start = 0;
+  var octets_slice = octets.slice(slice_start, slice_start + 16);
+  var output = '';
+  var padding = '                                                '; // 48 spaces
+  while (slice_start < octets.length) {
+    var octets_slice = octets.slice(slice_start, slice_start + 16);
+    slice_start += 16;
+    var hex_part = octetsToHex(octets_slice);
+    var line = String(hex_part + padding).slice(0,48) + '| ';
+    for (var i = 0; i < octets_slice.length; ++i) {
+      var octet = octets_slice[i];
+      if (octet > 31 && octet < 127) {
+        line += String.fromCharCode(octet);
+      } else {
+        line += '.'
+      }
+    }
+    output += line + '\n';
+  }
+
+  return output;
+}
+
 function doRoundTrip() {
   var input = uncompressedTextarea.value;
   var headerSet = headerSetFromString(input);
@@ -143,10 +198,14 @@ function doRoundTrip() {
   var error = null;
 
   try {
+    console.log("");
+    console.log("Doing Round Trip");
     encodedHeaderSet = headerEncoder.encodeHeaderSet(headerSet);
+    console.log("Encoded. Now decoding");
 
     headerDecoder.decodeHeaderSet(encodedHeaderSet, function(name, value) {
       deserializedHeaderSet.push([ name, value ]);
+    console.log("DONE");
     });
   } catch (e) {
     error = {
@@ -162,14 +221,16 @@ function doRoundTrip() {
     inputLength += headerSet[i][1].length;
   }
   var encodedHeaderSetStr = escapeOctets(encodedHeaderSet);
+  var encodedHeaderSetStrAsHex = octetsToHex(encodedHeaderSet);
   var outputLength = encodedHeaderSet.length;
-  var compressionRatio = inputLength / outputLength;
+  var compressionRatio = outputLength / inputLength;
   var headerSetsEqualValue = headerSetsEqual(headerSet, deserializedHeaderSet);
   var contextsEqual =
     headerEncoder.encodingContext_.equals(headerDecoder.encodingContext_);
   var intermediate = {
     inputLength: inputLength,
     output: encodedHeaderSetStr,
+    outputAsHex: encodedHeaderSetStrAsHex,
     outputLength: outputLength,
     compressionRatio: compressionRatio,
     headerSetsEqual: headerSetsEqualValue,
@@ -177,6 +238,10 @@ function doRoundTrip() {
     error: error
   };
   intermediateTextarea.textContent = JSON.stringify(intermediate, null, '  ');
+  exampleTextarea.value += octetsToExampleString(encodedHeaderSet) + '\n';
+  exampleTextarea.value += headerSetToString(deserializedHeaderSet) + '\n';
+  exampleTextarea.value += '#########################\n\n';
+  exampleTextarea.scrollTop = exampleTextarea.scrollHeight;  // scroll to bottom
 
   uncompressedTextarea.value = headerSetToString(headerSet);
 
@@ -208,6 +273,11 @@ function doChangeHeaderTableMaxSize() {
   decoderContextTextarea.textContent =
     JSON.stringify(headerDecoder.encodingContext_, null, '  ');
 }
+
+exampleTextarea.value += "CLIENT->SERVER Direction\n";
+exampleTextarea.value += formatCodebook(CODEBOOK1);
+exampleTextarea.value += "SERVER->CLIENT Direction\n";
+exampleTextarea.value += formatCodebook(CODEBOOK2);
 
 roundTripButton.addEventListener('click', doRoundTrip, false);
 

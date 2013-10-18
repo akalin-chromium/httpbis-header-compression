@@ -1,5 +1,104 @@
 'use strict';
 
+var FREQ_TABLE1 = [
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 61, 9, 0, 0, 2, 1433, 1662, 2,
+ 34, 34, 25, 4, 967, 1379, 2886, 4511,
+ 3198, 3331, 3597, 2691, 2251, 1880, 2155, 1639,
+ 1916, 1728, 171, 214, 0, 2120, 0, 251,
+ 0, 931, 481, 566, 696, 362, 545, 513,
+ 328, 524, 210, 260, 373, 287, 311, 288,
+ 381, 291, 328, 543, 434, 386, 372, 295,
+ 216, 205, 199, 2, 0, 2, 0, 1702,
+ 0, 4237, 1601, 3203, 2392, 4941, 932, 2297,
+ 1352, 3233, 913, 630, 2082, 2429, 3116, 3286,
+ 2510, 314, 2646, 3825, 3486, 1298, 839, 1172,
+ 760, 705, 352, 12, 12, 12, 4, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0,
+];
+
+var FREQ_TABLE2 = [
+ 87, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 8277, 0, 948, 9, 0, 191, 203, 2,
+ 191, 191, 6, 300, 2522, 2374, 1325, 3266,
+ 7630, 7965, 7636, 4415, 4337, 3594, 3253, 3223,
+ 3920, 3306, 3545, 421, 0, 1626, 0, 24,
+ 0, 1644, 820, 1187, 1116, 954, 1260, 1955,
+ 493, 674, 875, 560, 544, 2305, 844, 781,
+ 640, 537, 555, 965, 2550, 691, 504, 776,
+ 459, 507, 476, 11, 0, 11, 0, 436,
+ 0, 5171, 3355, 4201, 3265, 5511, 2185, 2455,
+ 1166, 3075, 768, 768, 1980, 1582, 3613, 3418,
+ 1864, 532, 2488, 2906, 3324, 2433, 1097, 927,
+ 1169, 749, 506, 9, 13, 9, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0,
+ 0,
+];
+
+function buildCodebook(freqTable) {
+  var freqTableAdjusted = [];
+  for (var i = 0; i < freqTable.length; ++i) {
+    freqTableAdjusted[i] = freqTable[i] + 1;
+  }
+  return codeLengthsToCanonicalEncoding(
+    getOptimalCodeLengths(freqTableAdjusted));
+}
+
+function buildInverseCodebook(codebook) {
+  var inverseCodebook = [];
+  for (var i = 0; i < codebook.length; ++i) {
+    if (codebook[i]) {
+      inverseCodebook[codebook[i].code] = { l: codebook[i].l, i: i };
+    }
+  }
+  return inverseCodebook;
+}
+
+var CODEBOOK1 = buildCodebook(FREQ_TABLE1);
+var CODEBOOK2 = buildCodebook(FREQ_TABLE2);
+
+var INVERSE_CODEBOOK1 = buildInverseCodebook(CODEBOOK1);
+var INVERSE_CODEBOOK2 = buildInverseCodebook(CODEBOOK2);
+
+var ENCODE_HUFFMAN = 0; // 1 to enable, 0 to disable.
+
 // For simplicity, we assume that the character codes of a string
 // represent an octet sequence. This implies that strings with
 // characters greater than \xff are invalid; this policy is
@@ -10,16 +109,12 @@ var INDEX_OPCODE = 0x1;
 var INDEX_N = 7;
 
 // Literal header without indexing (4.3.1).
-var LITERAL_NO_INDEX_OPCODE = 0x3;
-var LITERAL_NO_INDEX_N = 5;
+var LITERAL_NO_INDEX_OPCODE = 0x1;
+var LITERAL_NO_INDEX_N = 6;
 
 // Literal header with incremental indexing (4.3.2).
-var LITERAL_INCREMENTAL_OPCODE = 0x2;
-var LITERAL_INCREMENTAL_N = 5;
-
-// Literal header with substitution indexing (4.3.3).
-var LITERAL_SUBSTITUTION_OPCODE = 0x0;
-var LITERAL_SUBSTITUTION_N = 6;
+var LITERAL_INCREMENTAL_OPCODE = 0x0;
+var LITERAL_INCREMENTAL_N = 6;
 
 // Constants for the direction parameter to EncodingContext (which
 // controls which of the two pre-defined header tables below are
@@ -27,72 +122,67 @@ var LITERAL_SUBSTITUTION_N = 6;
 var REQUEST = 0;
 var RESPONSE = 1;
 
-// From B.1.
-var PRE_DEFINED_REQUEST_HEADER_TABLE = [
-  [ ':scheme',             'http'  ],  // 0
-  [ ':scheme',             'https' ],  // 1
-  [ ':host',               ''      ],  // 2
-  [ ':path',               '/'     ],  // 3
-  [ ':method',             'GET'   ],  // 4
-  [ 'accept',              ''      ],  // 5
-  [ 'accept-charset',      ''      ],  // 6
-  [ 'accept-encoding',     ''      ],  // 7
-  [ 'accept-language',     ''      ],  // 8
-  [ 'cookie',              ''      ],  // 9
-  [ 'if-modified-since',   ''      ],  // 10
-  [ 'user-agent',          ''      ],  // 11
-  [ 'referer',             ''      ],  // 12
-  [ 'authorization',       ''      ],  // 13
-  [ 'allow',               ''      ],  // 14
-  [ 'cache-control',       ''      ],  // 15
-  [ 'connection',          ''      ],  // 16
-  [ 'content-length',      ''      ],  // 17
-  [ 'content-type',        ''      ],  // 18
-  [ 'date',                ''      ],  // 19
-  [ 'expect',              ''      ],  // 20
-  [ 'from',                ''      ],  // 21
-  [ 'if-match',            ''      ],  // 22
-  [ 'if-none-match',       ''      ],  // 23
-  [ 'if-range',            ''      ],  // 24
-  [ 'if-unmodified-since', ''      ],  // 25
-  [ 'max-forwards',        ''      ],  // 26
-  [ 'proxy-authorization', ''      ],  // 27
-  [ 'range',               ''      ],  // 28
-  [ 'via',                 ''      ]   // 29
-];
-
-// From B.2.
-var PRE_DEFINED_RESPONSE_HEADER_TABLE = [
-  [ ':status',                     '200' ],  // 0
-  [ 'age',                         ''    ],  // 1
-  [ 'cache-control',               ''    ],  // 2
-  [ 'content-length',              ''    ],  // 3
-  [ 'content-type',                ''    ],  // 4
-  [ 'date',                        ''    ],  // 5
-  [ 'etag',                        ''    ],  // 6
-  [ 'expires',                     ''    ],  // 7
-  [ 'last-modified',               ''    ],  // 8
-  [ 'server',                      ''    ],  // 9
-  [ 'set-cookie',                  ''    ],  // 10
-  [ 'vary',                        ''    ],  // 11
-  [ 'via',                         ''    ],  // 12
-  [ 'access-control-allow-origin', ''    ],  // 13
-  [ 'accept-ranges',               ''    ],  // 14
-  [ 'allow',                       ''    ],  // 15
-  [ 'connection',                  ''    ],  // 16
-  [ 'content-disposition',         ''    ],  // 17
-  [ 'content-encoding',            ''    ],  // 18
-  [ 'content-language',            ''    ],  // 19
-  [ 'content-location',            ''    ],  // 20
-  [ 'content-range',               ''    ],  // 21
-  [ 'link',                        ''    ],  // 22
-  [ 'location',                    ''    ],  // 23
-  [ 'proxy-authenticate',          ''    ],  // 24
-  [ 'refresh',                     ''    ],  // 25
-  [ 'retry-after',                 ''    ],  // 26
-  [ 'strict-transport-security',   ''    ],  // 27
-  [ 'transfer-encoding',           ''    ],  // 28
-  [ 'www-authenticate',            ''    ],  // 29
+// From Appendix C
+var STATIC_HEADER_TABLE = [
+  [":authority"                  , ""           ], // 0
+  [":method"                     , "GET"        ], // 1
+  [":method"                     , "POST"       ], // 2
+  [":path"                       , "/"          ], // 3
+  [":path"                       , "/index.html"], // 4
+  [":scheme"                     , "http"       ], // 5
+  [":scheme"                     , "https"      ], // 6
+  [":status"                     , "200"        ], // 7
+  [":status"                     , "500"        ], // 8
+  [":status"                     , "404"        ], // 9
+  [":status"                     , "403"        ], // 10
+  [":status"                     , "400"        ], // 11
+  [":status"                     , "401"        ], // 12
+  ["accept-charset"              , ""           ], // 13
+  ["accept-encoding"             , ""           ], // 14
+  ["accept-language"             , ""           ], // 15
+  ["accept-ranges"               , ""           ], // 16
+  ["accept"                      , ""           ], // 17
+  ["access-control-allow-origin" , ""           ], // 18
+  ["age"                         , ""           ], // 19
+  ["allow"                       , ""           ], // 20
+  ["authorization"               , ""           ], // 21
+  ["cache-control"               , ""           ], // 22
+  ["content-disposition"         , ""           ], // 23
+  ["content-encoding"            , ""           ], // 24
+  ["content-language"            , ""           ], // 25
+  ["content-length"              , ""           ], // 26
+  ["content-location"            , ""           ], // 27
+  ["content-range"               , ""           ], // 28
+  ["content-type"                , ""           ], // 29
+  ["cookie"                      , ""           ], // 30
+  ["date"                        , ""           ], // 31
+  ["etag"                        , ""           ], // 32
+  ["expect"                      , ""           ], // 33
+  ["expires"                     , ""           ], // 34
+  ["from"                        , ""           ], // 35
+  ["if-match"                    , ""           ], // 36
+  ["if-modified-since"           , ""           ], // 37
+  ["if-none-match"               , ""           ], // 38
+  ["if-range"                    , ""           ], // 39
+  ["if-unmodified-since"         , ""           ], // 40
+  ["last-modified"               , ""           ], // 41
+  ["link"                        , ""           ], // 42
+  ["location"                    , ""           ], // 43
+  ["max-forwards"                , ""           ], // 44
+  ["proxy-authenticate"          , ""           ], // 45
+  ["proxy-authorization"         , ""           ], // 46
+  ["range"                       , ""           ], // 47
+  ["referer"                     , ""           ], // 48
+  ["refresh"                     , ""           ], // 49
+  ["retry-after"                 , ""           ], // 50
+  ["server"                      , ""           ], // 51
+  ["set-cookie"                  , ""           ], // 52
+  ["strict-transport-security"   , ""           ], // 53
+  ["transfer-encoding"           , ""           ], // 54
+  ["user-agent"                  , ""           ], // 55
+  ["vary"                        , ""           ], // 56
+  ["via"                         , ""           ], // 57
+  ["www-authenticate"            , ""           ], // 58
 ];
 
 // This regexp matches a string exactly when the octets represented by
@@ -103,9 +193,7 @@ var VALID_HEADER_NAME_REGEXP = /^:?[-!#$%&'*+.^_`|~0-9a-z]+$/;
 // This regexp matches a string exactly when the octets represented by
 // that string conforms to (the expected future content of) 4.1.3.
 //
-// 4.1.3 says that header values must be "sequences of UTF-8 encoded
-// text". However, this will most likely change to allow arbitrary
-// octet sequences so we don't bother trying to check UTF-8 validity.
+// The specification allows for arbitrary octet sequences in values.
 var VALID_HEADER_VALUE_REGEXP = /^[\x00-\xff]*$/;
 
 // Returns whether the given sequence of octets (represented as a
@@ -165,10 +253,12 @@ HeaderTableEntry.prototype.isReferenced = function() {
 };
 
 HeaderTableEntry.prototype.setReferenced = function() {
+  console.log("setting referenced: ", this)
   this.referenced_ = true;
 };
 
 HeaderTableEntry.prototype.unsetReferenced = function() {
+  console.log("unsetting referenced: ", this)
   delete this.referenced_;
 };
 
@@ -198,17 +288,16 @@ function HeaderTable() {
   this.maxSize_ = 4096;
 }
 
-HeaderTable.prototype.removeFirstEntry_ = function() {
+HeaderTable.prototype.removeLastEntry_ = function() {
   var firstEntry = this.entries_.shift();
   this.size_ -= firstEntry.size();
 };
 
-// The draft doesn't specify which entries to evict when the max size
-// is lowered, so we just start from the beginning.
 HeaderTable.prototype.setMaxSize = function(maxSize) {
   this.maxSize_ = maxSize;
-  while (this.size_ > this.maxSize_) {
-    this.removeFirstEntry_();
+  while (this.size_ > this.maxSize_ &&
+         this.entries_.length > 0) {
+    this.removeLastEntry_();
   }
 };
 
@@ -240,19 +329,23 @@ HeaderTable.prototype.findIndexWithName = function(name) {
   if (!isValidHeaderName(name)) {
     throw new Error('Invalid header name: ' + name);
   }
+  console.log("findIndexWithName: ", name);
 
   for (var i = 0; i < this.entries_.length; ++i) {
     var entry = this.entries_[i];
     if (stringsEqualConstantTime(entry.name, name)) {
+      console.log("found at idx: ", i);
       return i;
     }
   }
+  console.log("Nothing found.");
   return -1;
 };
 
 // Returns the index of the first header table entry with the given
 // name and value, or -1 if none exists.
 HeaderTable.prototype.findIndexWithNameAndValue = function(name, value) {
+  console.log("findIndexWithNameAndValue: ", name, value);
   if (!isValidHeaderName(name)) {
     throw new Error('Invalid header name: ' + name);
   }
@@ -265,9 +358,11 @@ HeaderTable.prototype.findIndexWithNameAndValue = function(name, value) {
     var entry = this.entries_[i];
     if (stringsEqualConstantTime(entry.name, name) &&
         stringsEqualConstantTime(entry.value, value)) {
+      console.log("found at idx: ", i);
       return i;
     }
   }
+  console.log("Nothing found.");
   return -1;
 };
 
@@ -294,6 +389,7 @@ HeaderTable.prototype.tryAppendEntry = function(
   if (!isValidHeaderValue(value)) {
     throw new Error('Invalid header value: ' + value);
   }
+  console.log("tryAppendEntry with ", name, value);
 
   // The algorithm used here is described in 3.2.4.
   var index = -1;
@@ -301,79 +397,19 @@ HeaderTable.prototype.tryAppendEntry = function(
   var sizeDelta = newEntry.size();
   var numToShift = 0;
   var sizeAfterShift = this.size_;
-  while ((numToShift < this.entries_.length) &&
+  while (this.entries_.length > 0 &&
          ((sizeAfterShift + sizeDelta) > this.maxSize_)) {
-    sizeAfterShift -= this.entries_[numToShift].size();
-    ++numToShift;
-  }
-  for (var i = 0; i < numToShift; ++i) {
-    if (this.entries_[i].isReferenced()) {
-      onReferenceSetRemovalFn(i);
-    }
-  }
-  for (var i = 0; i < numToShift; ++i) {
-    this.entries_.shift();
+    onReferenceSetRemovalFn(this.entries_.length - 1);
+    var evicted = this.entries_.shift();
+    sizeAfterShift -= evicted.size();
   }
   this.size_ = sizeAfterShift;
-  if ((this.size_ + sizeDelta) <= this.maxSize_) {
-    this.size_ += sizeDelta;
-    index = this.entries_.length;
-    this.entries_.push(newEntry);
-  }
-  return index;
-};
-
-// Tries to replace the entry at the given index with the given name
-// and value. Returns the index of the new or replaced entry if
-// successful, or -1 if not. onReferenceSetRemovalFn is called with
-// the index of every entry in the reference set that will be removed,
-// before any of them are removed.
-HeaderTable.prototype.tryReplaceEntry = function(
-  index, name, value, onReferenceSetRemovalFn) {
-  if (!isValidHeaderName(name)) {
-    throw new Error('Invalid header name: ' + name);
-  }
-
-  if (!isValidHeaderValue(value)) {
-    throw new Error('Invalid header value: ' + value);
-  }
-
-  // The algorithm used here is described in 3.2.4.
-  var newEntry = new HeaderTableEntry(name, value);
-  var sizeDelta = newEntry.size() - this.getEntry(index).size();
-  var numToShift = 0;
-  var sizeAfterShift = this.size_;
-  while ((numToShift < this.entries_.length) &&
-         ((sizeAfterShift + sizeDelta) > this.maxSize_)) {
-    sizeAfterShift -= this.entries_[numToShift].size();
-    ++numToShift;
-    if (numToShift >= index) {
-      // We will shift off the entry to replace and so we need to
-      // adjust sizeDelta to account for the fact that we will now
-      // prepend the new entry.
-      sizeDelta = newEntry.size();
-    }
-  }
-  for (var i = 0; i < numToShift; ++i) {
-    if (this.entries_[i].isReferenced()) {
-      onReferenceSetRemovalFn(i);
-    }
-  }
-  for (var i = 0; i < numToShift; ++i) {
-    this.entries_.shift();
-  }
-  index -= numToShift;
-  this.size_ = sizeAfterShift;
-  if ((this.size_ + sizeDelta) <= this.maxSize_) {
-    this.size_ += sizeDelta;
-    if (index >= 0) {
-      this.entries_[index] = newEntry;
-    } else {
-      index = 0;
-      this.entries_.unshift(newEntry);
-    }
+  if (sizeDelta <= this.maxSize_) {
+    index = 0;
+    this.entries_.unshift(newEntry);
+    console.log("Added new element ", newEntry);
   } else {
-    index = -1;
+    console.log("New element size", sizeDelta, "is too large to add");
   }
   return index;
 };
@@ -383,20 +419,9 @@ HeaderTable.prototype.tryReplaceEntry = function(
 function EncodingContext(direction) {
   // As described in 3.1.1, the encoding context contains a header
   // table and a reference set. Since HeaderTable already has the
-  // functionality of a reference set, that's the only thing we need.
+  // functionality of a reference set, and since the StaticTable
+  // is shared that's the only thing we need.
   this.headerTable_ = new HeaderTable();
-
-  var initialHeaderTable =
-    (direction == REQUEST) ?
-    PRE_DEFINED_REQUEST_HEADER_TABLE :
-    PRE_DEFINED_RESPONSE_HEADER_TABLE;
-  for (var i = 0; i < initialHeaderTable.length; ++i) {
-    var nameValuePair = initialHeaderTable[i];
-    this.headerTable_.tryAppendEntry(
-      nameValuePair[0], nameValuePair[1], function(referenceIndex) {
-        throw new Error('Unexpected removal from reference set');
-      });
-  }
 }
 
 EncodingContext.prototype.setHeaderTableMaxSize = function(maxSize) {
@@ -449,6 +474,7 @@ EncodingContext.prototype.forEachEntry = function(fn) {
 EncodingContext.prototype.processIndexedHeader = function(index) {
 // This follows the process described in 3.2.1.
   var entry = this.headerTable_.getEntry(index);
+  console.log("referenced:", index, this.headerTable_.getEntry(index));
   if (entry.isReferenced()) {
     entry.unsetReferenced();
   } else {
@@ -466,23 +492,9 @@ function(name, value, onReferenceSetRemovalFn) {
   var index = this.headerTable_.tryAppendEntry(
     name, value, onReferenceSetRemovalFn);
   if (index >= 0) {
+    console.log("literal+incremental_indexing:", this.headerTable_.getEntry(index));
     this.headerTable_.getEntry(index).setReferenced();
   }
   return index;
 };
 
-// Returns the index of the existing or new entry (which isn't
-// necessarily substitutedIndex) if the header was successfully
-// indexed, or -1 if not. onReferenceSetRemovalFn is called with the
-// index of every entry in the reference set that will be removed,
-// before any of them are removed.
-EncodingContext.prototype.processLiteralHeaderWithSubstitutionIndexing =
-function(name, substitutedIndex, value, onReferenceSetRemovalFn) {
-  // This follows the process described in 3.2.1.
-  var index = this.headerTable_.tryReplaceEntry(
-    substitutedIndex, name, value, onReferenceSetRemovalFn);
-  if (index >= 0) {
-    this.headerTable_.getEntry(index).setReferenced();
-  }
-  return index;
-};
