@@ -54,13 +54,26 @@ Decoder.prototype.decodeNextInteger_ = function(N) {
 
 // Decodes the next length-prefixed octet sequence and returns it as a
 // string with character codes representing the octets.
-Decoder.prototype.decodeNextOctetSequence_ = function() {
-  var length = this.decodeNextInteger_(0);
+Decoder.prototype.decodeNextOctetSequence_ = function(is_request) {
+  var is_huffman_encoded = this.peekNextOctet_() >> 7 & 1;
+  var length = this.decodeNextInteger_(7);
   var str = '';
-  for (var i = 0; i < length; ++i) {
-    var nextOctet = this.decodeNextOctet_();
-    str += String.fromCharCode(nextOctet);
+  if (is_huffman_encoded) {
+    var inv_code_table = INVERSE_CODEBOOK1;
+    if (!is_request) {
+      inv_code_table = INVERSE_CODEBOOK2;
+    }
+    var data = this.buffer_.slice(this.i_, this.i_ + length);
+    console.log("data:", data);
+    str = decodeBYTES(data, 0, inv_code_table).str;
+    this.i_ += length;
+  } else {
+    for (var i = 0; i < length; ++i) {
+      var nextOctet = this.decodeNextOctet_();
+      str += String.fromCharCode(nextOctet);
+    }
   }
+  console.log("Decoded str: ", str, " len: ", length, " is_request: ", is_request);
   return str;
 };
 

@@ -61,7 +61,7 @@ function codeLengthsToCanonicalEncoding(codeLengths) {
   return codes;
 }
 
-function encodeBYTE(str, codebook) {
+function encodeBYTES(str, codebook) {
   var a = [];
   var aByte = 0;
   var aByteBitLength = 0;
@@ -99,7 +99,7 @@ function encodeBYTE(str, codebook) {
   return a;
 }
 
-function decodeBYTE(a, start, inverseCodebook) {
+function decodeBYTES(a, start, inverseCodebook) {
   var code = 0;
   var codeLength = 0;
   var str = '';
@@ -118,8 +118,10 @@ function decodeBYTE(a, start, inverseCodebook) {
       code = 0;
       codeLength = 0;
       if (ch == 256) {
+        console.log("decodeBYTES: got EOS");
         break;
       }
+      console.log("decodeBYTES: decoded: ", ch);
       str += String.fromCharCode(ch);
     }
   }

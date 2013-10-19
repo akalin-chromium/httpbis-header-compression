@@ -97,7 +97,7 @@ var CODEBOOK2 = buildCodebook(FREQ_TABLE2);
 var INVERSE_CODEBOOK1 = buildInverseCodebook(CODEBOOK1);
 var INVERSE_CODEBOOK2 = buildInverseCodebook(CODEBOOK2);
 
-var ENCODE_HUFFMAN = 0; // 1 to enable, 0 to disable.
+var ENCODE_HUFFMAN = 1; // 1 to enable, 0 to disable.
 
 // For simplicity, we assume that the character codes of a string
 // represent an octet sequence. This implies that strings with
