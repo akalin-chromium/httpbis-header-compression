@@ -155,11 +155,37 @@ function octetsToHex(octets) {
   return str;
 }
 
+function formatCodeAsBits(code) {
+  var output = "|";
+  var count = 0;
+  for (var i = code.l - 1; i >= 0; --i) {
+    output += (code.code >> i & 0x1);
+    ++count;
+    if (count == 8) {
+      count = 0;
+      output += '|';
+    }
+  }
+  output += ' [' + code.l + ']';
+  return output;
+}
+
 function formatCodebook(codebook) {
   var output = '';
+  var padding = '                                           ';
   for (var i = 0; i < codebook.length; ++i) {
     var code = codebook[i];
-    output += i + " " + code.code + " " + code.l + '\n';
+    var sym = '     ';
+    if (i > 31 && i < 127) {
+      sym += "'" + String.fromCharCode(i) + "'";
+    } else if (i == 256) {
+      sym += "EOS";
+    }
+    sym = sym.slice(-5);
+    var num ='(' + String('   ' + i + ')').slice(-4);
+    var asbits = String(formatCodeAsBits(code) + padding).slice(0, 43);
+    var ashex = String(padding + code.code.toString(16) + " " + "[" + code.l + "]").slice(-12);
+    output += sym + " " + num + " " + asbits + " " + ashex + '\n';
   }
   return output;
 }
