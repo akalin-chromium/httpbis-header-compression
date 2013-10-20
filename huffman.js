@@ -123,12 +123,12 @@ function encodeBYTES(str, codebook) {
     }
   }
   function finishCoding() {
-    var eosCode = codebook[256];
     if (aByteBitLength % 8 == 0) {
       return;
     }
+    var eosCode = codebook[256];
     var bits_to_pad = 8 - aByteBitLength;
-    appendCode(eosCode.code, bits_to_pad);
+    appendCode(eosCode.code >> (eosCode.l - bits_to_pad), bits_to_pad);
     if (aByteBitLength > 0) {
       aByte <<= (8 - aByteBitLength);
       a.push(aByte);
@@ -166,7 +166,7 @@ function decodeBYTES(a, start, inverseCodebook) {
         console.log("decodeBYTES: got EOS");
         break;
       }
-      console.log("decodeBYTES: decoded: ", ch);
+      console.log("decodeBYTES: decoded: ", ch, String.fromCharCode(ch));
       str += String.fromCharCode(ch);
     }
   }

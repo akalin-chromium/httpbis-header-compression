@@ -2,7 +2,7 @@
 'use strict';
 
 // Request frequency table
-var FREQ_TABLE1 = [
+var CLIENT_TO_SERVER_FREQ_TABLE = [
         0,      0,      0,
         0,      0,      0,
         0,      0,      0,
@@ -88,11 +88,11 @@ var FREQ_TABLE1 = [
         0,      0,      0,
         0,      0,      0,
         0,      0,      0,
-        0,  33889,
+        0,      0,
 ];
 
 // Response freq table
-var FREQ_TABLE2 = [
+var SERVER_TO_CLIENT_FREQ_TABLE = [
         0,      0,      0,
         0,      0,      0,
         0,      0,      0,
@@ -178,6 +178,6 @@ var FREQ_TABLE2 = [
         0,      0,      0,
         0,      0,      0,
         0,      0,      0,
-        0,  84578,
+        0,      0,
 ];
 

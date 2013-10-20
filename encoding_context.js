@@ -1,12 +1,13 @@
 'use strict';
 
-var CODEBOOK1 = buildCodebook(FREQ_TABLE1);
-var CODEBOOK2 = buildCodebook(FREQ_TABLE2);
+var CLIENT_TO_SERVER_CODEBOOK = buildCodebook(CLIENT_TO_SERVER_FREQ_TABLE);
+var SERVER_TO_CLIENT_CODEBOOK = buildCodebook(SERVER_TO_CLIENT_FREQ_TABLE);
 
-var INVERSE_CODEBOOK1 = buildInverseCodebook(CODEBOOK1);
-var INVERSE_CODEBOOK2 = buildInverseCodebook(CODEBOOK2);
+var INVERSE_CLIENT_TO_SERVER_CODEBOOK = buildInverseCodebook(CLIENT_TO_SERVER_CODEBOOK);
+var INVERSE_SERVER_TO_CLIENT_CODEBOOK = buildInverseCodebook(SERVER_TO_CLIENT_CODEBOOK);
 
-var ENCODE_HUFFMAN = 1; // 1 to enable, 0 to disable.
+var ENCODE_HUFFMAN = 0; // 1 to enable, 0 to disable.
+var IS_REQUEST = 1;     // 1 implies request. 0 implies response.
 
 // For simplicity, we assume that the character codes of a string
 // represent an octet sequence. This implies that strings with

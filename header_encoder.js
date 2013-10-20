@@ -36,16 +36,16 @@ Encoder.prototype.encodeInteger = function(opCode, N, I) {
 
 // Encodes the given octet sequence represented by a string as a
 // length-prefixed octet sequence.
-Encoder.prototype.encodeOctetSequence = function(str, is_request) {
+Encoder.prototype.encodeOctetSequence = function(str) {
   var str_to_encode = str;
   if (ENCODE_HUFFMAN) {
-    var code_table = CODEBOOK1;
-    if (!is_request) {
-      code_table = CODEBOOK2;
+    var code_table = CLIENT_TO_SERVER_CODEBOOK;
+    if (!IS_REQUEST) {
+      code_table = SERVER_TO_CLIENT_CODEBOOK;
     }
     str_to_encode = String.fromCharCode.apply(String, encodeBYTES(str, code_table));
   }
-  console.log("str: ", str, " len: ", str_to_encode.length, " is request: ", is_request,  " str_to_encode: ", str_to_encode);
+  console.log("str: ", str, " len: ", str_to_encode.length, " is request: ", IS_REQUEST,  " str_to_encode: ", str_to_encode);
   this.encodeInteger(ENCODE_HUFFMAN, 7, str_to_encode.length);
   for (var i = 0; i < str_to_encode.length; ++i) {
     this.encodeOctet(str_to_encode.charCodeAt(i));
