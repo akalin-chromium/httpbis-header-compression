@@ -31,12 +31,16 @@ Decoder.prototype.decodeNextOctet_ = function() {
 Decoder.prototype.decodeNextInteger_ = function(N) {
   var I = 0;
   var hasMore = true;
-  var shift = N;
+  var R = 0;
+  var shift = 0;
+
+  var d = [];
 
   if (N > 0) {
     var nextMarker = (1 << N) - 1;
     var nextOctet = this.decodeNextOctet_();
     I = nextOctet & nextMarker;
+    d.push(I);
     hasMore = (I == nextMarker);
   }
 
@@ -45,9 +49,12 @@ Decoder.prototype.decodeNextInteger_ = function(N) {
     // Check the high bit. (Remember that / in JavaScript is
     // floating-point division).
     hasMore = ((nextOctet & 0x80) != 0);
-    I += (nextOctet % 128) << shift;
+    R += (nextOctet % 128) << shift;
+    d.push(R);
     shift += 7;
   }
+  I += R;
+  console.log("Decoded int: ", I, d);
 
   return I;
 };

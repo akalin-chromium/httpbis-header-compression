@@ -14,24 +14,32 @@ Encoder.prototype.encodeOctet = function(o) {
 // encoded integer.
 Encoder.prototype.encodeInteger = function(opCode, N, I) {
   var nextMarker = (1 << N) - 1;
+  var octets = [];
+  var origI = I;
 
   if (I < nextMarker) {
+    octets.push((opCode << N) | I);
     this.encodeOctet((opCode << N) | I);
+    console.log("Encoding: ", origI, " on ", N, " bits with prefixVal: ", opCode, " output: ", octets);
     return;
   }
 
   if (N > 0) {
+    octets.push((opCode << N) | nextMarker);
     this.encodeOctet((opCode << N) | nextMarker);
   }
 
   I -= nextMarker;
   while (I >= 128) {
+    octets.push(I % 128 | 128);
     this.encodeOctet(I % 128 | 128);
     // Divide I by 128. (Remember that / in JavaScript is
     // floating-point division).
     I >>= 7;
   }
+  octets.push(I);
   this.encodeOctet(I);
+  console.log("Encoding: ", origI, " on ", N, " bits with prefixVal: ", opCode, " output: ", octets);
 }
 
 // Encodes the given octet sequence represented by a string as a
