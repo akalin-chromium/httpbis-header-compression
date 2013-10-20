@@ -173,12 +173,12 @@ HeaderTableEntry.prototype.isReferenced = function() {
 };
 
 HeaderTableEntry.prototype.setReferenced = function() {
-  console.log("setting referenced: ", this)
+  //console.log("setting referenced: ", this)
   this.referenced_ = true;
 };
 
 HeaderTableEntry.prototype.unsetReferenced = function() {
-  console.log("unsetting referenced: ", this)
+  //console.log("unsetting referenced: ", this)
   delete this.referenced_;
 };
 
@@ -249,23 +249,23 @@ HeaderTable.prototype.findIndexWithName = function(name) {
   if (!isValidHeaderName(name)) {
     throw new Error('Invalid header name: ' + name);
   }
-  console.log("findIndexWithName: ", name);
+  //console.log("findIndexWithName: ", name);
 
   for (var i = 0; i < this.entries_.length; ++i) {
     var entry = this.entries_[i];
     if (stringsEqualConstantTime(entry.name, name)) {
-      console.log("found at idx: ", i);
+      //console.log("found at idx: ", i);
       return i;
     }
   }
-  console.log("Nothing found.");
+  //console.log("Nothing found.");
   return -1;
 };
 
 // Returns the index of the first header table entry with the given
 // name and value, or -1 if none exists.
 HeaderTable.prototype.findIndexWithNameAndValue = function(name, value) {
-  console.log("findIndexWithNameAndValue: ", name, value);
+  //console.log("findIndexWithNameAndValue: ", name, value);
   if (!isValidHeaderName(name)) {
     throw new Error('Invalid header name: ' + name);
   }
@@ -278,11 +278,11 @@ HeaderTable.prototype.findIndexWithNameAndValue = function(name, value) {
     var entry = this.entries_[i];
     if (stringsEqualConstantTime(entry.name, name) &&
         stringsEqualConstantTime(entry.value, value)) {
-      console.log("found at idx: ", i);
+      //console.log("found at idx: ", i);
       return i;
     }
   }
-  console.log("Nothing found.");
+  //console.log("Nothing found.");
   return -1;
 };
 
@@ -309,7 +309,7 @@ HeaderTable.prototype.tryAppendEntry = function(
   if (!isValidHeaderValue(value)) {
     throw new Error('Invalid header value: ' + value);
   }
-  console.log("tryAppendEntry with ", name, value);
+  //console.log("tryAppendEntry with ", name, value);
 
   // The algorithm used here is described in 3.2.4.
   var index = -1;
@@ -327,9 +327,9 @@ HeaderTable.prototype.tryAppendEntry = function(
   if (sizeDelta <= this.maxSize_) {
     index = 0;
     this.entries_.unshift(newEntry);
-    console.log("Added new element ", newEntry);
+    //console.log("Added new element ", newEntry);
   } else {
-    console.log("New element size", sizeDelta, "is too large to add");
+    //console.log("New element size", sizeDelta, "is too large to add");
   }
   return index;
 };
@@ -394,7 +394,7 @@ EncodingContext.prototype.forEachEntry = function(fn) {
 EncodingContext.prototype.processIndexedHeader = function(index) {
 // This follows the process described in 3.2.1.
   var entry = this.headerTable_.getEntry(index);
-  console.log("referenced:", index, this.headerTable_.getEntry(index));
+  //console.log("referenced:", index, this.headerTable_.getEntry(index));
   if (entry.isReferenced()) {
     entry.unsetReferenced();
   } else {
@@ -412,7 +412,7 @@ function(name, value, onReferenceSetRemovalFn) {
   var index = this.headerTable_.tryAppendEntry(
     name, value, onReferenceSetRemovalFn);
   if (index >= 0) {
-    console.log("literal+incremental_indexing:", this.headerTable_.getEntry(index));
+    //console.log("literal+incremental_indexing:", this.headerTable_.getEntry(index));
     this.headerTable_.getEntry(index).setReferenced();
   }
   return index;

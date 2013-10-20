@@ -63,7 +63,6 @@ Decoder.prototype.finishedCurrentOpcode = function() {
 
 Decoder.prototype.getFormattedOpcodeList = function() {
   var output = "";
-  console.log("opcodeStack: ", this.opcodeStack_);
   for (var i = 0; i < this.opcodeStack_.length; ++i) {
     output += formatOpcode(this.opcodeStack_[i]) + '\n';
   }
@@ -118,7 +117,7 @@ Decoder.prototype.decodeNextInteger_ = function(N, description) {
   this.pushOntoCurrentOpcode( {fieldName: description,
                                encoded: data,
                                decoded: I} );
-  console.log("Decoded", description, ": ", I, "from: ", this.buffer_.slice(start, this.i_));
+  //console.log("Decoded", description, ": ", I, "from: ", this.buffer_.slice(start, this.i_));
   return I;
 };
 
@@ -147,9 +146,9 @@ Decoder.prototype.decodeNextOctetSequence_ = function(description) {
                                 is_huffman_encoded: is_huffman_encoded,
                                 encoded: data,
                                 decoded: '"' + str + '"'} );
-  console.log("Decoded str: ", str, " len: ", length,
-              "is_huffman_encoded: ", is_huffman_encoded,
-              "is_request: ", IS_REQUEST, "from: ", data);
+  //console.log("Decoded str: ", str, " len: ", length,
+  //            "is_huffman_encoded: ", is_huffman_encoded,
+  //            "is_request: ", IS_REQUEST, "from: ", data);
   return str;
 };
 
@@ -198,8 +197,6 @@ Decoder.prototype.processNextHeaderRepresentation = function() {
   var nextOctet = this.peekNextOctet_();
   var opcodeStartIndex = this.i_;
   var opcode = determineOpcode(nextOctet);
-  console.log("first ", opcode.opcode_len,
-              "bits of opcode octet: ", nextOctet, " indicate opcode: ", opcode.name);
 
   // Touches are used below to track which headers have been emitted.
   this.pushOntoCurrentOpcode({fieldName: opcode.name, firstByte: nextOctet});
