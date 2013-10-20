@@ -115,6 +115,7 @@ Decoder.prototype.decodeNextInteger_ = function(N, description) {
   I += R;
   var data = this.buffer_.slice(start, this.i_);
   this.pushOntoCurrentOpcode( {fieldName: description,
+                               prefixLen: N,
                                encoded: data,
                                decoded: I} );
   //console.log("Decoded", description, ": ", I, "from: ", this.buffer_.slice(start, this.i_));
@@ -199,7 +200,7 @@ Decoder.prototype.processNextHeaderRepresentation = function() {
   var opcode = determineOpcode(nextOctet);
 
   // Touches are used below to track which headers have been emitted.
-  this.pushOntoCurrentOpcode({fieldName: opcode.name, firstByte: nextOctet});
+  this.pushOntoCurrentOpcode({fieldName: opcode.name, opcodeLengthInBits: opcode.opcode_len, firstBytePeek: nextOctet});
   switch (opcode) {
     case OPCODES.INDEX_OPCODE:
       var index = this.decodeNextInteger_(7, "entry_index");
