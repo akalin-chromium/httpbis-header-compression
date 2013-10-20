@@ -28,19 +28,18 @@ Decoder.prototype.decodeNextOctet_ = function() {
 
 // Decodes the next integer based on the representation described in
 // 4.1.1. N is the number of bits of the prefix as described in 4.1.1.
-Decoder.prototype.decodeNextInteger_ = function(N) {
+Decoder.prototype.decodeNextInteger_ = function(N, description) {
   var I = 0;
   var hasMore = true;
   var R = 0;
   var shift = 0;
-
-  var d = [];
+  var start = this.i_;
+  if (!description) description = "int";
 
   if (N > 0) {
     var nextMarker = (1 << N) - 1;
     var nextOctet = this.decodeNextOctet_();
     I = nextOctet & nextMarker;
-    d.push(I);
     hasMore = (I == nextMarker);
   }
 
@@ -50,11 +49,10 @@ Decoder.prototype.decodeNextInteger_ = function(N) {
     // floating-point division).
     hasMore = ((nextOctet & 0x80) != 0);
     R += (nextOctet % 128) << shift;
-    d.push(R);
     shift += 7;
   }
   I += R;
-  console.log("Decoded int: ", I, d);
+  console.log("Decoded", description, ": ", I, "from: ", this.buffer_.slice(start, this.i_));
 
   return I;
 };
@@ -63,15 +61,15 @@ Decoder.prototype.decodeNextInteger_ = function(N) {
 // string with character codes representing the octets.
 Decoder.prototype.decodeNextOctetSequence_ = function() {
   var is_huffman_encoded = this.peekNextOctet_() >> 7 & 1;
-  var length = this.decodeNextInteger_(7);
+  var length = this.decodeNextInteger_(7, "length");
+  var data = this.buffer_.slice(this.i_, this.i_ + length);
   var str = '';
   if (is_huffman_encoded) {
     var inv_code_table = INVERSE_CLIENT_TO_SERVER_CODEBOOK;
     if (!IS_REQUEST) {
       inv_code_table = INVERSE_SERVER_TO_CLIENT_CODEBOOK;
     }
-    var data = this.buffer_.slice(this.i_, this.i_ + length);
-    console.log("data:", data);
+    //console.log("decoding huffman data:", data);
     str = decodeBYTES(data, 0, inv_code_table).str;
     this.i_ += length;
   } else {
@@ -80,7 +78,9 @@ Decoder.prototype.decodeNextOctetSequence_ = function() {
       str += String.fromCharCode(nextOctet);
     }
   }
-  console.log("Decoded str: ", str, " len: ", length, " is_request: ", IS_REQUEST);
+  console.log("Decoded str: ", str, " len: ", length,
+              "is_huffman_encoded: ", is_huffman_encoded,
+              "is_request: ", IS_REQUEST, "from: ", data);
   return str;
 };
 
@@ -88,7 +88,7 @@ Decoder.prototype.decodeNextOctetSequence_ = function() {
 // in 4.1.2. N is the number of bits of the prefix of the length of
 // the header name as described in 4.1.1.
 Decoder.prototype.decodeNextName_ = function(N) {
-  var indexPlusOneOrZero = this.decodeNextInteger_(N);
+  var indexPlusOneOrZero = this.decodeNextInteger_(N, "name index");
   var name = null;
   if (indexPlusOneOrZero == 0) {
     name = this.decodeNextOctetSequence_();
@@ -112,49 +112,68 @@ Decoder.prototype.decodeNextValue_ = function() {
   return value;
 };
 
+Decoder.prototype.opcodeDebugging = function(start, end) {
+  if (end == null) {
+    end = this.i_;
+  }
+  console.log("Opcode data: ", this.buffer_.slice(start, end).map(function(x){return x&0xff;}));
+}
+
+function determineOpcode(nextOctet) {
+  var opcode = OPCODES.UNKNOWN_OPCODE;
+  if ((nextOctet >> INDEX_N) == INDEX_VALUE) {
+    opcode = OPCODES.INDEX_OPCODE;
+  } else if ((nextOctet >> LITERAL_NO_INDEX_N) == LITERAL_NO_INDEX_VALUE) {
+    opcode = OPCODES.LITERAL_NO_INDEX_OPCODE;
+  } else if((nextOctet >> LITERAL_INCREMENTAL_N) == LITERAL_INCREMENTAL_VALUE) {
+    opcode = OPCODES.LITERAL_INCREMENTAL_OPCODE;
+  }
+  return opcode;
+}
+
 // Processes the next header representation as described in 3.2.1.
 Decoder.prototype.processNextHeaderRepresentation = function() {
   var nextOctet = this.peekNextOctet_();
+  var opcodeStartIndex = this.i_;
+  var opcode = determineOpcode(nextOctet);
+  console.log("first ", opcode.opcode_len,
+              "bits of opcode octet: ", nextOctet, " indicate opcode: ", opcode.name);
 
   // Touches are used below to track which headers have been emitted.
-
-  if ((nextOctet >> INDEX_N) == INDEX_OPCODE) {
-    // Indexed header (4.2).
-    var index = this.decodeNextInteger_(7);
-    this.encodingContext_.processIndexedHeader(index);
-    if (!this.encodingContext_.isReferenced(index)) {
-      return;
-    }
-    this.encodingContext_.addTouches(index, 0);
-    var name = this.encodingContext_.getIndexedHeaderName(index);
-    var value = this.encodingContext_.getIndexedHeaderValue(index);
-    this.emitFunction_(name, value);
-    return;
-  }
-
-  if ((nextOctet >> LITERAL_NO_INDEX_N) == LITERAL_NO_INDEX_OPCODE) {
-    // Literal header without indexing (4.3.1).
-    var name = this.decodeNextName_(LITERAL_NO_INDEX_N);
-    var value = this.decodeNextValue_();
-    this.emitFunction_(name, value);
-    return;
-  }
-
-  if ((nextOctet >> LITERAL_INCREMENTAL_N) == LITERAL_INCREMENTAL_OPCODE) {
-    // Literal header with incremental indexing (4.3.2).
-    var name = this.decodeNextName_(LITERAL_INCREMENTAL_N);
-    var value = this.decodeNextValue_();
-    var index =
-      this.encodingContext_.processLiteralHeaderWithIncrementalIndexing(
-        name, value, function(referenceIndex) { /* Do nothing */ });
-    if (index >= 0) {
+  switch (opcode) {
+    case OPCODES.INDEX_OPCODE:
+      var index = this.decodeNextInteger_(7, "entry index");
+      this.encodingContext_.processIndexedHeader(index);
+      if (!this.encodingContext_.isReferenced(index)) {
+        break;
+      }
       this.encodingContext_.addTouches(index, 0);
-    }
-    this.emitFunction_(name, value);
-    return;
+      var name = this.encodingContext_.getIndexedHeaderName(index);
+      var value = this.encodingContext_.getIndexedHeaderValue(index);
+      this.emitFunction_(name, value);
+      break;
+    case OPCODES.LITERAL_INCREMENTAL_OPCODE:
+      // Literal header with incremental indexing (4.3.2).
+      var name = this.decodeNextName_(LITERAL_INCREMENTAL_N);
+      var value = this.decodeNextValue_();
+      var index =
+        this.encodingContext_.processLiteralHeaderWithIncrementalIndexing(
+            name, value, function(referenceIndex) { /* Do nothing */ });
+      if (index >= 0) {
+        this.encodingContext_.addTouches(index, 0);
+      }
+      this.emitFunction_(name, value);
+      break;
+    case OPCODES.LITERAL_NO_INDEX_OPCODE:
+      // Literal header without indexing (4.3.1).
+      var name = this.decodeNextName_(LITERAL_NO_INDEX_N);
+      var value = this.decodeNextValue_();
+      this.emitFunction_(name, value);
+      break;
+    default:
+      throw new Error('Could not decode opcode from ' + nextOctet);
   }
-
-  throw new Error('Could not decode opcode from ' + nextOctet);
+  this.opcodeDebugging(opcodeStartIndex);
 };
 
 // direction can be either REQUEST or RESPONSE, which controls the

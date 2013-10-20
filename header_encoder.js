@@ -65,7 +65,7 @@ Encoder.prototype.encodeOctetSequence = function(str) {
 
 // Encode an indexed header as described in 4.2.
 Encoder.prototype.encodeIndexedHeader = function(index) {
-  this.encodeInteger(INDEX_OPCODE, INDEX_N, index);
+  this.encodeInteger(INDEX_VALUE, INDEX_N, index);
 }
 
 // Encode a literal header without indexing as described in 4.3.1.
@@ -73,13 +73,13 @@ Encoder.prototype.encodeLiteralHeaderWithoutIndexing = function(
   indexOrName, value) {
   switch (typeof indexOrName) {
     case 'number':
-      this.encodeInteger(LITERAL_NO_INDEX_OPCODE, LITERAL_NO_INDEX_N,
+      this.encodeInteger(LITERAL_NO_INDEX_VALUE, LITERAL_NO_INDEX_N,
                          indexOrName + 1);
       this.encodeOctetSequence(value);
       return;
 
     case 'string':
-      this.encodeInteger(LITERAL_NO_INDEX_OPCODE, LITERAL_NO_INDEX_N, 0);
+      this.encodeInteger(LITERAL_NO_INDEX_VALUE, LITERAL_NO_INDEX_N, 0);
       this.encodeOctetSequence(indexOrName);
       this.encodeOctetSequence(value);
       return;
@@ -94,13 +94,13 @@ Encoder.prototype.encodeLiteralHeaderWithIncrementalIndexing = function(
   indexOrName, value) {
   switch (typeof indexOrName) {
     case 'number':
-      this.encodeInteger(LITERAL_INCREMENTAL_OPCODE, LITERAL_INCREMENTAL_N,
+      this.encodeInteger(LITERAL_INCREMENTAL_VALUE, LITERAL_INCREMENTAL_N,
                          indexOrName + 1);
       this.encodeOctetSequence(value);
       return;
 
     case 'string':
-      this.encodeInteger(LITERAL_INCREMENTAL_OPCODE, LITERAL_INCREMENTAL_N,
+      this.encodeInteger(LITERAL_INCREMENTAL_VALUE, LITERAL_INCREMENTAL_N,
                          0);
       this.encodeOctetSequence(indexOrName);
       this.encodeOctetSequence(value);

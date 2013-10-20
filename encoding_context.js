@@ -15,16 +15,26 @@ var IS_REQUEST = 1;     // 1 implies request. 0 implies response.
 // encapsulated in the isValidHeader{Name,Value}() functions below.
 
 // Indexed header (4.2).
-var INDEX_OPCODE = 0x1;
+var INDEX_VALUE = 0x1;
 var INDEX_N = 7;
 
 // Literal header without indexing (4.3.1).
-var LITERAL_NO_INDEX_OPCODE = 0x1;
+var LITERAL_NO_INDEX_VALUE = 0x1;
 var LITERAL_NO_INDEX_N = 6;
 
 // Literal header with incremental indexing (4.3.2).
-var LITERAL_INCREMENTAL_OPCODE = 0x0;
+var LITERAL_INCREMENTAL_VALUE = 0x0;
 var LITERAL_INCREMENTAL_N = 6;
+
+var OPCODES = {
+  UNKNOWN_OPCODE             : {value:   0, opcode_len: 8, prefix_len: 0, name: "UNKNOWN_OPCODE"},
+  INDEX_OPCODE               : {value: 0x0, opcode_len: 1, prefix_len: 7, name: "INDEX_OPCODE"},
+  LITERAL_INCREMENTAL_OPCODE : {value: 0x0, opcode_len: 2, prefix_len: 6, name: "LITERAL_INCREMENTAL_OPCODE"},
+  LITERAL_NO_INDEX_OPCODE    : {value: 0x1, opcode_len: 2, prefix_len: 6, name: "LITERAL_NO_INDEX_OPCODE"},
+};
+
+
+
 
 // Constants for the direction parameter to EncodingContext (which
 // controls which of the two pre-defined header tables below are

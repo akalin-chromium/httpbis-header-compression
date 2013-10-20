@@ -85,13 +85,13 @@ function buildCodebook(freqTable) {
       freqTableAdjusted[i] = freq / divisor;
     }
     var codeLengths = getOptimalCodeLengths(freqTableAdjusted);
-    console.log(codeLengths);
+    //console.log(codeLengths);
     var maxCodeLen = 0;
     for (var i = 0; i < codeLengths.length; ++i) {
       maxCodeLen = Math.max(maxCodeLen, codeLengths[i]);
     }
     if (maxCodeLen <= 32) break;
-    console.log(maxCodeLen)
+    //console.log(maxCodeLen)
   }
   return codeLengthsToCanonicalEncoding(codeLengths);
 }
@@ -137,7 +137,7 @@ function encodeBYTES(str, codebook) {
   for (var i = 0; i < str.length; ++i) {
     var ch = str.charCodeAt(i);
     var code = codebook[ch];
-    console.log('huffman coding: ', String.fromCharCode(ch), code.code, code.l);
+    //console.log('huffman coding: ', String.fromCharCode(ch), code.code, code.l);
     appendCode(code.code, code.l);
   }
   finishCoding();
@@ -163,10 +163,10 @@ function decodeBYTES(a, start, inverseCodebook) {
       code = 0;
       codeLength = 0;
       if (ch == 256) {
-        console.log("decodeBYTES: got EOS");
+        //console.log("decodeBYTES: got EOS");
         break;
       }
-      console.log("decodeBYTES: decoded: ", ch, String.fromCharCode(ch));
+      //console.log("decodeBYTES: decoded: ", ch, String.fromCharCode(ch));
       str += String.fromCharCode(ch);
     }
   }
