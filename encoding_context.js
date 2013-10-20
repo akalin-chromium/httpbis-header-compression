@@ -310,11 +310,8 @@ HeaderTable.prototype.tryAppendEntry = function(
   //console.log("tryAppendEntry with ", name, value);
 
   // The algorithm used here is described in 3.2.4.
-  var index = -1;
   var newEntry = new HeaderTableEntry(name, value);
   var sizeDelta = newEntry.size();
-  var numToShift = 0;
-  var sizeAfterShift = this.size_;
   var targetSize = Math.max(0, this.maxSize_ - sizeDelta);
   while (this.entries_.length > 0 && (this.size_ > targetSize)) {
     onReferenceSetRemovalFn(this.entries_.length - 1);
@@ -322,14 +319,12 @@ HeaderTable.prototype.tryAppendEntry = function(
     this.size_ -= evicted.size();
   }
   if (sizeDelta <= this.maxSize_) {
-    index = 0;
     this.entries_.unshift(newEntry);
     this.size_ += sizeDelta;
     //console.log("Added new element ", newEntry);
-  } else {
-    //console.log("New element size", sizeDelta, "is too large to add");
+    return 0;
   }
-  return index;
+  return -1;
 };
 
 // direction can be either REQUEST or RESPONSE, which controls the
