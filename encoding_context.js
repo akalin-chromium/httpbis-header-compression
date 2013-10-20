@@ -33,9 +33,6 @@ var OPCODES = {
   LITERAL_NO_INDEX_OPCODE    : {value: 0x1, opcode_len: 2, prefix_len: 6, name: "LITERAL_NO_INDEX_OPCODE"},
 };
 
-
-
-
 // Constants for the direction parameter to EncodingContext (which
 // controls which of the two pre-defined header tables below are
 // used).
@@ -208,6 +205,8 @@ function HeaderTable() {
   this.maxSize_ = 4096;
 }
 
+// Since the reference set is encoded as part of every/any entry's data,
+// removing the entry removes references to it as well.
 HeaderTable.prototype.removeLastEntry_ = function() {
   var firstEntry = this.entries_.shift();
   this.size_ -= firstEntry.size();
@@ -215,8 +214,7 @@ HeaderTable.prototype.removeLastEntry_ = function() {
 
 HeaderTable.prototype.setMaxSize = function(maxSize) {
   this.maxSize_ = maxSize;
-  while (this.size_ > this.maxSize_ &&
-         this.entries_.length > 0) {
+  while (this.size_ > this.maxSize_ && this.entries_.length > 0) {
     this.removeLastEntry_();
   }
 };
@@ -317,16 +315,16 @@ HeaderTable.prototype.tryAppendEntry = function(
   var sizeDelta = newEntry.size();
   var numToShift = 0;
   var sizeAfterShift = this.size_;
-  while (this.entries_.length > 0 &&
-         ((sizeAfterShift + sizeDelta) > this.maxSize_)) {
+  var targetSize = Math.max(0, this.maxSize_ - sizeDelta);
+  while (this.entries_.length > 0 && (this.size_ > targetSize)) {
     onReferenceSetRemovalFn(this.entries_.length - 1);
     var evicted = this.entries_.shift();
-    sizeAfterShift -= evicted.size();
+    this.size_ -= evicted.size();
   }
-  this.size_ = sizeAfterShift;
   if (sizeDelta <= this.maxSize_) {
     index = 0;
     this.entries_.unshift(newEntry);
+    this.size_ += sizeDelta;
     //console.log("Added new element ", newEntry);
   } else {
     //console.log("New element size", sizeDelta, "is too large to add");
