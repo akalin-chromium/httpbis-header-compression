@@ -256,14 +256,16 @@ function doDecode() {
   var encodedHeaderSet = hexToOctets(intermediate.output);
   var error = null;
   var deserializedHeaderSet = []; // parse from intermediate.
+  var formattedOpcodes = "";
 
   if (intermediate.error != null) {
     alert("Not decoding because the intermediate had an error in it!");
     return;
   }
   try {
-    headerDecoder.decodeHeaderSet(encodedHeaderSet, function(name, value) {
-      deserializedHeaderSet.push([ name, value ]);
+    formattedOpcodes =
+      headerDecoder.decodeHeaderSet(encodedHeaderSet, function(name, value) {
+        deserializedHeaderSet.push([ name, value ]);
     });
   } catch (e) {
     error = {
@@ -273,11 +275,13 @@ function doDecode() {
     };
     alert(JSON.stringify(error));
   }
+
   decoderContextTextarea.textContent =
     JSON.stringify(headerDecoder.encodingContext_, null, '  ');
   var outputHeaders = headerSetToString(deserializedHeaderSet);
   decoderOutputTextarea.value = outputHeaders;
   exampleTextarea.value += octetsToExampleString(encodedHeaderSet) + '\n';
+  exampleTextarea.value += formattedOpcodes + '\n';
   exampleTextarea.value += outputHeaders + '\n';
   exampleTextarea.value += '#########################\n\n';
   exampleTextarea.scrollTop = exampleTextarea.scrollHeight;  // scroll to bottom
