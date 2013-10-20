@@ -238,6 +238,7 @@ function doEncode() {
   var encodedHeaderSetStr = octetsToHex(encodedHeaderSet);
   var encodedHeaderSetStrSize = encodedHeaderSet.length;
   var intermediate = {
+    inputLen: input.length,
     output: encodedHeaderSetStr,
     outputLength: encodedHeaderSetStrSize,
     error: error
@@ -269,7 +270,7 @@ function doDecode() {
       message: e.message,
       stack: e.stack
     };
-    alert(error.toString());
+    alert(JSON.stringify(error));
   }
   decoderContextTextarea.textContent =
     JSON.stringify(headerDecoder.encodingContext_, null, '  ');
@@ -280,6 +281,26 @@ function doDecode() {
   exampleTextarea.value += '#########################\n\n';
   exampleTextarea.scrollTop = exampleTextarea.scrollHeight;  // scroll to bottom
   console.log("Decoded");
+}
+
+function doCompareInputToOutput() {
+  var intermediate = JSON.parse(intermediateTextarea.textContent);
+  var encodedHeaderSet = hexToOctets(intermediate.output);
+  var outputLength = encodedHeaderSet.length;
+  var inputLength = intermediate.inputLength;
+  var compressionRatio = outputLength / inputLength;
+  var headerSetsEqualValue = headerSetsEqual(headerSet, deserializedHeaderSet);
+  var contextsEqual =
+    headerEncoder.encodingContext_.equals(headerDecoder.encodingContext_);
+  var intermediate = {
+    inputLength: inputLength,
+    output: encodedHeaderSetStr,
+    outputLength: outputLength,
+    compressionRatio: compressionRatio,
+    headerSetsEqual: headerSetsEqualValue,
+    contextsEqual: contextsEqual,
+    error: error
+  };
 }
 
 function doRoundTrip() {
