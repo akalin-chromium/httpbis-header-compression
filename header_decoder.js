@@ -7,7 +7,75 @@ function Decoder(buffer, encodingContext, emitFunction) {
   this.i_ = 0;
   this.encodingContext_ = encodingContext;
   this.emitFunction_ = emitFunction;
+  this.opcodeStack_ = [];
+  this.currentOpcode_ = [];
 }
+
+Decoder.prototype.pushOntoCurrentOpcode = function(x) {
+  this.currentOpcode_.push(x);
+}
+
+function octetsToHex(octets, use_spaces) {
+  var str = '';
+  for (var i = 0; i < octets.length; ++i) {
+    var octet = octets[i];
+    if (octet < 16) {
+      str += '0';
+    }
+    str += '' + octet.toString(16);
+    if (use_spaces) str += ' ';
+  }
+  return str;
+}
+
+function formatOpcode(opFields) {
+  // opFields, [operation, ... operation]
+  // operation, {name: 'blah', data: {key1: foo, key2: ...} }
+  var output = '';
+  var cols = 0;
+
+  function addSpaces(numSpaces) {
+    for (var k = 0; k < numSpaces; ++k) output += ' ';
+    cols += numSpaces;
+  }
+  //console.log(opFields);
+  var tabLen = 0;
+  for (var i = 0; i < opFields.length; ++i) {
+    var name = opFields[i].name;
+    var data = opFields[i].data;
+    addSpaces(tabLen);
+    output += name + ':\n';
+    tabLen = 4;
+    for (var key in data) {
+      var entry = data[key];
+      if (key == "encoded") {
+        entry = '"' + octetsToHex(entry) + '"';
+      } else {
+        entry = entry.toString();
+      }
+      addSpaces(tabLen + 4);
+      output += key + ': ' + entry + '\n';
+    }
+    tabLen = 4;
+  }
+
+  return output;
+}
+
+Decoder.prototype.finishedCurrentOpcode = function() {
+  //console.log(formatOpcode(this.currentOpcode_));
+  this.opcodeStack_.push(this.currentOpcode_);
+  this.currentOpcode_ = [];
+}
+
+Decoder.prototype.getFormattedOpcodeList = function() {
+  var output = "";
+  for (var i = 0; i < this.opcodeStack_.length; ++i) {
+    output += formatOpcode(this.opcodeStack_[i]) + '\n';
+  }
+  return output;
+}
+
 
 Decoder.prototype.hasMoreData = function() {
   return this.i_ < this.buffer_.length;
@@ -28,10 +96,13 @@ Decoder.prototype.decodeNextOctet_ = function() {
 
 // Decodes the next integer based on the representation described in
 // 4.1.1. N is the number of bits of the prefix as described in 4.1.1.
-Decoder.prototype.decodeNextInteger_ = function(N) {
+Decoder.prototype.decodeNextInteger_ = function(N, description) {
   var I = 0;
   var hasMore = true;
-  var shift = N;
+  var R = 0;
+  var shift = 0;
+  var start = this.i_;
+  if (!description) description = "int";
 
   if (N > 0) {
     var nextMarker = (1 << N) - 1;
@@ -45,22 +116,49 @@ Decoder.prototype.decodeNextInteger_ = function(N) {
     // Check the high bit. (Remember that / in JavaScript is
     // floating-point division).
     hasMore = ((nextOctet & 0x80) != 0);
-    I += (nextOctet % 128) << shift;
+    R += (nextOctet % 128) << shift;
     shift += 7;
   }
-
+  I += R;
+  var data = this.buffer_.slice(start, this.i_);
+  this.pushOntoCurrentOpcode( {name: description,
+                               data: {
+                               //prefixLen: N,
+                               encoded: data,
+                               decoded: I}} );
+  //console.log("Decoded", description, ": ", I, "from: ", this.buffer_.slice(start, this.i_));
   return I;
 };
 
 // Decodes the next length-prefixed octet sequence and returns it as a
 // string with character codes representing the octets.
-Decoder.prototype.decodeNextOctetSequence_ = function() {
-  var length = this.decodeNextInteger_(0);
+Decoder.prototype.decodeNextOctetSequence_ = function(description) {
+  var is_huffman_encoded = this.peekNextOctet_() >> 7 & 1;
+  var length = this.decodeNextInteger_(7, description + "_length");
+  var data = this.buffer_.slice(this.i_, this.i_ + length);
   var str = '';
-  for (var i = 0; i < length; ++i) {
-    var nextOctet = this.decodeNextOctet_();
-    str += String.fromCharCode(nextOctet);
+  if (is_huffman_encoded) {
+    var inv_code_table = INVERSE_CLIENT_TO_SERVER_CODEBOOK;
+    if (!IS_REQUEST) {
+      inv_code_table = INVERSE_SERVER_TO_CLIENT_CODEBOOK;
+    }
+    //console.log("decoding huffman data:", data);
+    str = decodeBYTES(data, 0, inv_code_table).str;
+    this.i_ += length;
+  } else {
+    for (var i = 0; i < length; ++i) {
+      var nextOctet = this.decodeNextOctet_();
+      str += String.fromCharCode(nextOctet);
+    }
   }
+  this.pushOntoCurrentOpcode( { name: description,
+                                data: {
+                                  is_huffman_encoded: is_huffman_encoded,
+                                  encoded: data,
+                                  decoded: '"' + str + '"'}} );
+  //console.log("Decoded str: ", str, " len: ", length,
+  //            "is_huffman_encoded: ", is_huffman_encoded,
+  //            "is_request: ", IS_REQUEST, "from: ", data);
   return str;
 };
 
@@ -68,10 +166,10 @@ Decoder.prototype.decodeNextOctetSequence_ = function() {
 // in 4.1.2. N is the number of bits of the prefix of the length of
 // the header name as described in 4.1.1.
 Decoder.prototype.decodeNextName_ = function(N) {
-  var indexPlusOneOrZero = this.decodeNextInteger_(N);
+  var indexPlusOneOrZero = this.decodeNextInteger_(N, "name_index");
   var name = null;
   if (indexPlusOneOrZero == 0) {
-    name = this.decodeNextOctetSequence_();
+    name = this.decodeNextOctetSequence_("name_data");
   } else {
     var index = indexPlusOneOrZero - 1;
     name = this.encodingContext_.getIndexedHeaderName(index);
@@ -85,72 +183,71 @@ Decoder.prototype.decodeNextName_ = function(N) {
 // Decodes the next header value based on the representation described
 // in 4.1.3.
 Decoder.prototype.decodeNextValue_ = function() {
-  var value = this.decodeNextOctetSequence_();
+  var value = this.decodeNextOctetSequence_("value_data");
   if (!isValidHeaderValue(value)) {
     throw new Error('Invalid header value: ' + value);
   }
   return value;
 };
 
+function determineOpcode(nextOctet) {
+  var opcode = OPCODES.UNKNOWN_OPCODE;
+  if ((nextOctet >> INDEX_N) == INDEX_VALUE) {
+    opcode = OPCODES.INDEX_OPCODE;
+  } else if ((nextOctet >> LITERAL_NO_INDEX_N) == LITERAL_NO_INDEX_VALUE) {
+    opcode = OPCODES.LITERAL_NO_INDEX_OPCODE;
+  } else if((nextOctet >> LITERAL_INCREMENTAL_N) == LITERAL_INCREMENTAL_VALUE) {
+    opcode = OPCODES.LITERAL_INCREMENTAL_OPCODE;
+  }
+  return opcode;
+}
+
 // Processes the next header representation as described in 3.2.1.
 Decoder.prototype.processNextHeaderRepresentation = function() {
   var nextOctet = this.peekNextOctet_();
+  var opcodeStartIndex = this.i_;
+  var opcode = determineOpcode(nextOctet);
 
+  this.pushOntoCurrentOpcode({name: opcode.name,
+                              data: {
+                                opcodeLengthInBits: opcode.opcode_len,
+                                discoveredFromPeekingAtByte:
+                                        "'" + octetsToHex([nextOctet]) + "'"}});
   // Touches are used below to track which headers have been emitted.
-
-  if ((nextOctet >> INDEX_N) == INDEX_OPCODE) {
-    // Indexed header (4.2).
-    var index = this.decodeNextInteger_(7);
-    this.encodingContext_.processIndexedHeader(index);
-    if (!this.encodingContext_.isReferenced(index)) {
-      return;
-    }
-    this.encodingContext_.addTouches(index, 0);
-    var name = this.encodingContext_.getIndexedHeaderName(index);
-    var value = this.encodingContext_.getIndexedHeaderValue(index);
-    this.emitFunction_(name, value);
-    return;
-  }
-
-  if ((nextOctet >> LITERAL_NO_INDEX_N) == LITERAL_NO_INDEX_OPCODE) {
-    // Literal header without indexing (4.3.1).
-    var name = this.decodeNextName_(LITERAL_NO_INDEX_N);
-    var value = this.decodeNextValue_();
-    this.emitFunction_(name, value);
-    return;
-  }
-
-  if ((nextOctet >> LITERAL_INCREMENTAL_N) == LITERAL_INCREMENTAL_OPCODE) {
-    // Literal header with incremental indexing (4.3.2).
-    var name = this.decodeNextName_(LITERAL_INCREMENTAL_N);
-    var value = this.decodeNextValue_();
-    var index =
-      this.encodingContext_.processLiteralHeaderWithIncrementalIndexing(
-        name, value, function(referenceIndex) { /* Do nothing */ });
-    if (index >= 0) {
+  switch (opcode) {
+    case OPCODES.INDEX_OPCODE:
+      var index = this.decodeNextInteger_(7, "entry_index");
+      this.encodingContext_.processIndexedHeader(index);
+      if (!this.encodingContext_.isReferenced(index)) {
+        break;
+      }
       this.encodingContext_.addTouches(index, 0);
-    }
-    this.emitFunction_(name, value);
-    return;
+      var name = this.encodingContext_.getIndexedHeaderName(index);
+      var value = this.encodingContext_.getIndexedHeaderValue(index);
+      this.emitFunction_(name, value);
+      break;
+    case OPCODES.LITERAL_INCREMENTAL_OPCODE:
+      // Literal header with incremental indexing (4.3.2).
+      var name = this.decodeNextName_(LITERAL_INCREMENTAL_N);
+      var value = this.decodeNextValue_();
+      var index =
+        this.encodingContext_.processLiteralHeaderWithIncrementalIndexing(
+            name, value, function(referenceIndex) { /* Do nothing */ });
+      if (index >= 0) {
+        this.encodingContext_.addTouches(index, 0);
+      }
+      this.emitFunction_(name, value);
+      break;
+    case OPCODES.LITERAL_NO_INDEX_OPCODE:
+      // Literal header without indexing (4.3.1).
+      var name = this.decodeNextName_(LITERAL_NO_INDEX_N);
+      var value = this.decodeNextValue_();
+      this.emitFunction_(name, value);
+      break;
+    default:
+      throw new Error('Could not decode opcode from ' + nextOctet);
   }
-
-  if ((nextOctet >> LITERAL_SUBSTITUTION_N) == LITERAL_SUBSTITUTION_OPCODE) {
-    // Literal header with substitution indexing (4.3.3).
-    var name = this.decodeNextName_(LITERAL_SUBSTITUTION_N);
-    var substitutedIndex = this.decodeNextInteger_(0);
-    var value = this.decodeNextValue_();
-    var index =
-      this.encodingContext_.processLiteralHeaderWithSubstitutionIndexing(
-        name, substitutedIndex, value,
-        function(referenceIndex) { /* Do nothing */ });
-    if (index >= 0) {
-      this.encodingContext_.addTouches(index, 0);
-    }
-    this.emitFunction_(name, value);
-    return;
-  }
-
-  throw new Error('Could not decode opcode from ' + nextOctet);
+  this.finishedCurrentOpcode();
 };
 
 // direction can be either REQUEST or RESPONSE, which controls the
@@ -163,6 +260,7 @@ HeaderDecoder.prototype.setHeaderTableMaxSize = function(maxSize) {
   this.encodingContext_.setHeaderTableMaxSize(maxSize);
 };
 
+
 // encodedHeaderSet must be the complete encoding of an header set,
 // represented as an array of octets. emitFunction will be called with
 // the name and value of each header in the header set. An exception
@@ -174,6 +272,7 @@ HeaderDecoder.prototype.decodeHeaderSet = function(
   while (decoder.hasMoreData()) {
     decoder.processNextHeaderRepresentation();
   }
+  var formattedOpcodes = decoder.getFormattedOpcodeList();
 
   // Emits each header contained in the reference set that has not
   // already been emitted as described in 3.2.2.
@@ -184,4 +283,7 @@ HeaderDecoder.prototype.decodeHeaderSet = function(
       }
       this.encodingContext_.clearTouches(index);
     }.bind(this));
+  return formattedOpcodes;
 };
+
+

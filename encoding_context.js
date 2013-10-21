@@ -1,25 +1,38 @@
 'use strict';
 
+var CLIENT_TO_SERVER_CODEBOOK = buildCodebook(CLIENT_TO_SERVER_FREQ_TABLE);
+var SERVER_TO_CLIENT_CODEBOOK = buildCodebook(SERVER_TO_CLIENT_FREQ_TABLE);
+
+var INVERSE_CLIENT_TO_SERVER_CODEBOOK = buildInverseCodebook(CLIENT_TO_SERVER_CODEBOOK);
+var INVERSE_SERVER_TO_CLIENT_CODEBOOK = buildInverseCodebook(SERVER_TO_CLIENT_CODEBOOK);
+
+var ENCODE_HUFFMAN = 1;
+var IS_REQUEST = 1;     // 1 implies request. 0 implies response.
+var USE_STATIC_TABLE = 1;
+
 // For simplicity, we assume that the character codes of a string
 // represent an octet sequence. This implies that strings with
 // characters greater than \xff are invalid; this policy is
 // encapsulated in the isValidHeader{Name,Value}() functions below.
 
 // Indexed header (4.2).
-var INDEX_OPCODE = 0x1;
+var INDEX_VALUE = 0x1;
 var INDEX_N = 7;
 
 // Literal header without indexing (4.3.1).
-var LITERAL_NO_INDEX_OPCODE = 0x3;
-var LITERAL_NO_INDEX_N = 5;
+var LITERAL_NO_INDEX_VALUE = 0x1;
+var LITERAL_NO_INDEX_N = 6;
 
 // Literal header with incremental indexing (4.3.2).
-var LITERAL_INCREMENTAL_OPCODE = 0x2;
-var LITERAL_INCREMENTAL_N = 5;
+var LITERAL_INCREMENTAL_VALUE = 0x0;
+var LITERAL_INCREMENTAL_N = 6;
 
-// Literal header with substitution indexing (4.3.3).
-var LITERAL_SUBSTITUTION_OPCODE = 0x0;
-var LITERAL_SUBSTITUTION_N = 6;
+var OPCODES = {
+  UNKNOWN_OPCODE             : {value:   0, opcode_len: 8, prefix_len: 0, name: "UNKNOWN_OPCODE"},
+  INDEX_OPCODE               : {value: 0x0, opcode_len: 1, prefix_len: 7, name: "INDEX_OPCODE"},
+  LITERAL_INCREMENTAL_OPCODE : {value: 0x0, opcode_len: 2, prefix_len: 6, name: "LITERAL_INCREMENTAL_OPCODE"},
+  LITERAL_NO_INDEX_OPCODE    : {value: 0x1, opcode_len: 2, prefix_len: 6, name: "LITERAL_NO_INDEX_OPCODE"},
+};
 
 // Constants for the direction parameter to EncodingContext (which
 // controls which of the two pre-defined header tables below are
@@ -27,72 +40,67 @@ var LITERAL_SUBSTITUTION_N = 6;
 var REQUEST = 0;
 var RESPONSE = 1;
 
-// From B.1.
-var PRE_DEFINED_REQUEST_HEADER_TABLE = [
-  [ ':scheme',             'http'  ],  // 0
-  [ ':scheme',             'https' ],  // 1
-  [ ':host',               ''      ],  // 2
-  [ ':path',               '/'     ],  // 3
-  [ ':method',             'GET'   ],  // 4
-  [ 'accept',              ''      ],  // 5
-  [ 'accept-charset',      ''      ],  // 6
-  [ 'accept-encoding',     ''      ],  // 7
-  [ 'accept-language',     ''      ],  // 8
-  [ 'cookie',              ''      ],  // 9
-  [ 'if-modified-since',   ''      ],  // 10
-  [ 'user-agent',          ''      ],  // 11
-  [ 'referer',             ''      ],  // 12
-  [ 'authorization',       ''      ],  // 13
-  [ 'allow',               ''      ],  // 14
-  [ 'cache-control',       ''      ],  // 15
-  [ 'connection',          ''      ],  // 16
-  [ 'content-length',      ''      ],  // 17
-  [ 'content-type',        ''      ],  // 18
-  [ 'date',                ''      ],  // 19
-  [ 'expect',              ''      ],  // 20
-  [ 'from',                ''      ],  // 21
-  [ 'if-match',            ''      ],  // 22
-  [ 'if-none-match',       ''      ],  // 23
-  [ 'if-range',            ''      ],  // 24
-  [ 'if-unmodified-since', ''      ],  // 25
-  [ 'max-forwards',        ''      ],  // 26
-  [ 'proxy-authorization', ''      ],  // 27
-  [ 'range',               ''      ],  // 28
-  [ 'via',                 ''      ]   // 29
-];
-
-// From B.2.
-var PRE_DEFINED_RESPONSE_HEADER_TABLE = [
-  [ ':status',                     '200' ],  // 0
-  [ 'age',                         ''    ],  // 1
-  [ 'cache-control',               ''    ],  // 2
-  [ 'content-length',              ''    ],  // 3
-  [ 'content-type',                ''    ],  // 4
-  [ 'date',                        ''    ],  // 5
-  [ 'etag',                        ''    ],  // 6
-  [ 'expires',                     ''    ],  // 7
-  [ 'last-modified',               ''    ],  // 8
-  [ 'server',                      ''    ],  // 9
-  [ 'set-cookie',                  ''    ],  // 10
-  [ 'vary',                        ''    ],  // 11
-  [ 'via',                         ''    ],  // 12
-  [ 'access-control-allow-origin', ''    ],  // 13
-  [ 'accept-ranges',               ''    ],  // 14
-  [ 'allow',                       ''    ],  // 15
-  [ 'connection',                  ''    ],  // 16
-  [ 'content-disposition',         ''    ],  // 17
-  [ 'content-encoding',            ''    ],  // 18
-  [ 'content-language',            ''    ],  // 19
-  [ 'content-location',            ''    ],  // 20
-  [ 'content-range',               ''    ],  // 21
-  [ 'link',                        ''    ],  // 22
-  [ 'location',                    ''    ],  // 23
-  [ 'proxy-authenticate',          ''    ],  // 24
-  [ 'refresh',                     ''    ],  // 25
-  [ 'retry-after',                 ''    ],  // 26
-  [ 'strict-transport-security',   ''    ],  // 27
-  [ 'transfer-encoding',           ''    ],  // 28
-  [ 'www-authenticate',            ''    ],  // 29
+// From Appendix C
+var STATIC_HEADER_TABLE = [
+  {name: ":authority"                  , value: ""           }, // 0
+  {name: ":method"                     , value: "GET"        }, // 1
+  {name: ":method"                     , value: "POST"       }, // 2
+  {name: ":path"                       , value: "/"          }, // 3
+  {name: ":path"                       , value: "/index.html"}, // 4
+  {name: ":scheme"                     , value: "http"       }, // 5
+  {name: ":scheme"                     , value: "https"      }, // 6
+  {name: ":status"                     , value: "200"        }, // 7
+  {name: ":status"                     , value: "500"        }, // 8
+  {name: ":status"                     , value: "404"        }, // 9
+  {name: ":status"                     , value: "403"        }, // 10
+  {name: ":status"                     , value: "400"        }, // 11
+  {name: ":status"                     , value: "401"        }, // 12
+  {name: "accept-charset"              , value: ""           }, // 13
+  {name: "accept-encoding"             , value: ""           }, // 14
+  {name: "accept-language"             , value: ""           }, // 15
+  {name: "accept-ranges"               , value: ""           }, // 16
+  {name: "accept"                      , value: ""           }, // 17
+  {name: "access-control-allow-origin" , value: ""           }, // 18
+  {name: "age"                         , value: ""           }, // 19
+  {name: "allow"                       , value: ""           }, // 20
+  {name: "authorization"               , value: ""           }, // 21
+  {name: "cache-control"               , value: ""           }, // 22
+  {name: "content-disposition"         , value: ""           }, // 23
+  {name: "content-encoding"            , value: ""           }, // 24
+  {name: "content-language"            , value: ""           }, // 25
+  {name: "content-length"              , value: ""           }, // 26
+  {name: "content-location"            , value: ""           }, // 27
+  {name: "content-range"               , value: ""           }, // 28
+  {name: "content-type"                , value: ""           }, // 29
+  {name: "cookie"                      , value: ""           }, // 30
+  {name: "date"                        , value: ""           }, // 31
+  {name: "etag"                        , value: ""           }, // 32
+  {name: "expect"                      , value: ""           }, // 33
+  {name: "expires"                     , value: ""           }, // 34
+  {name: "from"                        , value: ""           }, // 35
+  {name: "if-match"                    , value: ""           }, // 36
+  {name: "if-modified-since"           , value: ""           }, // 37
+  {name: "if-none-match"               , value: ""           }, // 38
+  {name: "if-range"                    , value: ""           }, // 39
+  {name: "if-unmodified-since"         , value: ""           }, // 40
+  {name: "last-modified"               , value: ""           }, // 41
+  {name: "link"                        , value: ""           }, // 42
+  {name: "location"                    , value: ""           }, // 43
+  {name: "max-forwards"                , value: ""           }, // 44
+  {name: "proxy-authenticate"          , value: ""           }, // 45
+  {name: "proxy-authorization"         , value: ""           }, // 46
+  {name: "range"                       , value: ""           }, // 47
+  {name: "referer"                     , value: ""           }, // 48
+  {name: "refresh"                     , value: ""           }, // 49
+  {name: "retry-after"                 , value: ""           }, // 50
+  {name: "server"                      , value: ""           }, // 51
+  {name: "set-cookie"                  , value: ""           }, // 52
+  {name: "strict-transport-security"   , value: ""           }, // 53
+  {name: "transfer-encoding"           , value: ""           }, // 54
+  {name: "user-agent"                  , value: ""           }, // 55
+  {name: "vary"                        , value: ""           }, // 56
+  {name: "via"                         , value: ""           }, // 57
+  {name: "www-authenticate"            , value: ""           }, // 58
 ];
 
 // This regexp matches a string exactly when the octets represented by
@@ -103,9 +111,7 @@ var VALID_HEADER_NAME_REGEXP = /^:?[-!#$%&'*+.^_`|~0-9a-z]+$/;
 // This regexp matches a string exactly when the octets represented by
 // that string conforms to (the expected future content of) 4.1.3.
 //
-// 4.1.3 says that header values must be "sequences of UTF-8 encoded
-// text". However, this will most likely change to allow arbitrary
-// octet sequences so we don't bother trying to check UTF-8 validity.
+// The specification allows for arbitrary octet sequences in values.
 var VALID_HEADER_VALUE_REGEXP = /^[\x00-\xff]*$/;
 
 // Returns whether the given sequence of octets (represented as a
@@ -139,7 +145,7 @@ function stringsEqualConstantTime(str1, str2) {
 // reference set (3.1.3). This structure also keeps track of how many
 // times a header has been 'touched', which is useful for both
 // encoding and decoding.
-function HeaderTableEntry(name, value) {
+function HeaderTableEntry(name, value, isStatic) {
   this.name = name;
   this.value = value;
 }
@@ -165,10 +171,12 @@ HeaderTableEntry.prototype.isReferenced = function() {
 };
 
 HeaderTableEntry.prototype.setReferenced = function() {
+  //console.log("setting referenced: ", this)
   this.referenced_ = true;
 };
 
 HeaderTableEntry.prototype.unsetReferenced = function() {
+  //console.log("unsetting referenced: ", this)
   delete this.referenced_;
 };
 
@@ -198,17 +206,17 @@ function HeaderTable() {
   this.maxSize_ = 4096;
 }
 
-HeaderTable.prototype.removeFirstEntry_ = function() {
+// Since the reference set is encoded as part of every/any entry's data,
+// removing the entry removes references to it as well.
+HeaderTable.prototype.removeLastEntry_ = function() {
   var firstEntry = this.entries_.shift();
   this.size_ -= firstEntry.size();
 };
 
-// The draft doesn't specify which entries to evict when the max size
-// is lowered, so we just start from the beginning.
 HeaderTable.prototype.setMaxSize = function(maxSize) {
   this.maxSize_ = maxSize;
-  while (this.size_ > this.maxSize_) {
-    this.removeFirstEntry_();
+  while (this.size_ > this.maxSize_ && this.entries_.length > 0) {
+    this.removeLastEntry_();
   }
 };
 
@@ -228,10 +236,20 @@ HeaderTable.prototype.equals = function(other) {
 };
 
 HeaderTable.prototype.getEntry = function(index) {
-  if (!(index in this.entries_)) {
+  if (index < 0) {
     throw new Error('Invalid index ' + index);
   }
-  return this.entries_[index];
+  if (index < this.entries_.length) {
+    return this.entries_[index];
+  }
+  if (USE_STATIC_TABLE) {
+    var static_index = index - this.entries_.length;
+    if (static_index < STATIC_HEADER_TABLE.length) {
+      var static_entry = STATIC_HEADER_TABLE[static_index];
+      return new HeaderTableEntry(static_entry.name, static_entry.value);
+    }
+  }
+  throw new Error('Invalid index ' + index);
 };
 
 // Returns the index of the first header table entry with the given
@@ -240,19 +258,32 @@ HeaderTable.prototype.findIndexWithName = function(name) {
   if (!isValidHeaderName(name)) {
     throw new Error('Invalid header name: ' + name);
   }
+  //console.log("findIndexWithName: ", name);
 
   for (var i = 0; i < this.entries_.length; ++i) {
     var entry = this.entries_[i];
     if (stringsEqualConstantTime(entry.name, name)) {
+      //console.log("found at idx: ", i);
       return i;
     }
   }
+  if (USE_STATIC_TABLE) {
+    for (var i = 0; i < STATIC_HEADER_TABLE.length; ++i) {
+      var entry = STATIC_HEADER_TABLE[i];
+      if (stringsEqualConstantTime(entry.name, name)) {
+        //console.log("found at idx: ", i);
+        return i + this.entries_.length;
+      }
+    }
+  }
+  //console.log("Nothing found.");
   return -1;
 };
 
 // Returns the index of the first header table entry with the given
 // name and value, or -1 if none exists.
 HeaderTable.prototype.findIndexWithNameAndValue = function(name, value) {
+  //console.log("findIndexWithNameAndValue: ", name, value);
   if (!isValidHeaderName(name)) {
     throw new Error('Invalid header name: ' + name);
   }
@@ -265,9 +296,21 @@ HeaderTable.prototype.findIndexWithNameAndValue = function(name, value) {
     var entry = this.entries_[i];
     if (stringsEqualConstantTime(entry.name, name) &&
         stringsEqualConstantTime(entry.value, value)) {
+      //console.log("found at idx: ", i);
       return i;
     }
   }
+  if (USE_STATIC_TABLE) {
+    for (var i = 0; i < STATIC_HEADER_TABLE; ++i) {
+      var entry = STATIC_HEADER_TABLE[i];
+      if (stringsEqualConstantTime(entry.name, name) &&
+          stringsEqualConstantTime(entry.value, value)) {
+            //console.log("found at idx: ", i);
+            return i + this.entries_.length();
+          }
+    }
+  }
+  //console.log("Nothing found.");
   return -1;
 };
 
@@ -294,88 +337,24 @@ HeaderTable.prototype.tryAppendEntry = function(
   if (!isValidHeaderValue(value)) {
     throw new Error('Invalid header value: ' + value);
   }
+  //console.log("tryAppendEntry with ", name, value);
 
   // The algorithm used here is described in 3.2.4.
-  var index = -1;
   var newEntry = new HeaderTableEntry(name, value);
   var sizeDelta = newEntry.size();
-  var numToShift = 0;
-  var sizeAfterShift = this.size_;
-  while ((numToShift < this.entries_.length) &&
-         ((sizeAfterShift + sizeDelta) > this.maxSize_)) {
-    sizeAfterShift -= this.entries_[numToShift].size();
-    ++numToShift;
+  var targetSize = Math.max(0, this.maxSize_ - sizeDelta);
+  while (this.entries_.length > 0 && (this.size_ > targetSize)) {
+    onReferenceSetRemovalFn(this.entries_.length - 1);
+    var evicted = this.entries_.shift();
+    this.size_ -= evicted.size();
   }
-  for (var i = 0; i < numToShift; ++i) {
-    if (this.entries_[i].isReferenced()) {
-      onReferenceSetRemovalFn(i);
-    }
-  }
-  for (var i = 0; i < numToShift; ++i) {
-    this.entries_.shift();
-  }
-  this.size_ = sizeAfterShift;
-  if ((this.size_ + sizeDelta) <= this.maxSize_) {
+  if (sizeDelta <= this.maxSize_) {
+    this.entries_.unshift(newEntry);
     this.size_ += sizeDelta;
-    index = this.entries_.length;
-    this.entries_.push(newEntry);
+    //console.log("Added new element ", newEntry);
+    return 0;
   }
-  return index;
-};
-
-// Tries to replace the entry at the given index with the given name
-// and value. Returns the index of the new or replaced entry if
-// successful, or -1 if not. onReferenceSetRemovalFn is called with
-// the index of every entry in the reference set that will be removed,
-// before any of them are removed.
-HeaderTable.prototype.tryReplaceEntry = function(
-  index, name, value, onReferenceSetRemovalFn) {
-  if (!isValidHeaderName(name)) {
-    throw new Error('Invalid header name: ' + name);
-  }
-
-  if (!isValidHeaderValue(value)) {
-    throw new Error('Invalid header value: ' + value);
-  }
-
-  // The algorithm used here is described in 3.2.4.
-  var newEntry = new HeaderTableEntry(name, value);
-  var sizeDelta = newEntry.size() - this.getEntry(index).size();
-  var numToShift = 0;
-  var sizeAfterShift = this.size_;
-  while ((numToShift < this.entries_.length) &&
-         ((sizeAfterShift + sizeDelta) > this.maxSize_)) {
-    sizeAfterShift -= this.entries_[numToShift].size();
-    ++numToShift;
-    if (numToShift >= index) {
-      // We will shift off the entry to replace and so we need to
-      // adjust sizeDelta to account for the fact that we will now
-      // prepend the new entry.
-      sizeDelta = newEntry.size();
-    }
-  }
-  for (var i = 0; i < numToShift; ++i) {
-    if (this.entries_[i].isReferenced()) {
-      onReferenceSetRemovalFn(i);
-    }
-  }
-  for (var i = 0; i < numToShift; ++i) {
-    this.entries_.shift();
-  }
-  index -= numToShift;
-  this.size_ = sizeAfterShift;
-  if ((this.size_ + sizeDelta) <= this.maxSize_) {
-    this.size_ += sizeDelta;
-    if (index >= 0) {
-      this.entries_[index] = newEntry;
-    } else {
-      index = 0;
-      this.entries_.unshift(newEntry);
-    }
-  } else {
-    index = -1;
-  }
-  return index;
+  return -1;
 };
 
 // direction can be either REQUEST or RESPONSE, which controls the
@@ -383,20 +362,9 @@ HeaderTable.prototype.tryReplaceEntry = function(
 function EncodingContext(direction) {
   // As described in 3.1.1, the encoding context contains a header
   // table and a reference set. Since HeaderTable already has the
-  // functionality of a reference set, that's the only thing we need.
+  // functionality of a reference set, and since the StaticTable
+  // is shared that's the only thing we need.
   this.headerTable_ = new HeaderTable();
-
-  var initialHeaderTable =
-    (direction == REQUEST) ?
-    PRE_DEFINED_REQUEST_HEADER_TABLE :
-    PRE_DEFINED_RESPONSE_HEADER_TABLE;
-  for (var i = 0; i < initialHeaderTable.length; ++i) {
-    var nameValuePair = initialHeaderTable[i];
-    this.headerTable_.tryAppendEntry(
-      nameValuePair[0], nameValuePair[1], function(referenceIndex) {
-        throw new Error('Unexpected removal from reference set');
-      });
-  }
 }
 
 EncodingContext.prototype.setHeaderTableMaxSize = function(maxSize) {
@@ -449,6 +417,7 @@ EncodingContext.prototype.forEachEntry = function(fn) {
 EncodingContext.prototype.processIndexedHeader = function(index) {
 // This follows the process described in 3.2.1.
   var entry = this.headerTable_.getEntry(index);
+  //console.log("referenced:", index, this.headerTable_.getEntry(index));
   if (entry.isReferenced()) {
     entry.unsetReferenced();
   } else {
@@ -466,23 +435,9 @@ function(name, value, onReferenceSetRemovalFn) {
   var index = this.headerTable_.tryAppendEntry(
     name, value, onReferenceSetRemovalFn);
   if (index >= 0) {
+    //console.log("literal+incremental_indexing:", this.headerTable_.getEntry(index));
     this.headerTable_.getEntry(index).setReferenced();
   }
   return index;
 };
 
-// Returns the index of the existing or new entry (which isn't
-// necessarily substitutedIndex) if the header was successfully
-// indexed, or -1 if not. onReferenceSetRemovalFn is called with the
-// index of every entry in the reference set that will be removed,
-// before any of them are removed.
-EncodingContext.prototype.processLiteralHeaderWithSubstitutionIndexing =
-function(name, substitutedIndex, value, onReferenceSetRemovalFn) {
-  // This follows the process described in 3.2.1.
-  var index = this.headerTable_.tryReplaceEntry(
-    substitutedIndex, name, value, onReferenceSetRemovalFn);
-  if (index >= 0) {
-    this.headerTable_.getEntry(index).setReferenced();
-  }
-  return index;
-};

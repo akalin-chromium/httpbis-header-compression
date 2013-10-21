@@ -1,64 +1,55 @@
+<script src="example_requests_and_responses.js"></script>
+<script src="freq_tables.js"></script>
+<script src="huffman.js"></script>
 <script src="encoding_context.js"></script>
 <script src="header_encoder.js"></script>
 <script src="header_decoder.js"></script>
 
 <input id="roundTripButton" type="button" value="Round-trip" />
-
-<br />
-
+<input id="encodeButton" type="button" value="Encode" />
+<input id="decodeButton" type="button" value="Decode" />
+Is Request?<input id="isRequestCheckbox" type="checkbox" checked=true />&nbsp;
+Use Huffman?<input id="useHuffmanCheckbox" type="checkbox" checked=true />&nbsp;
+Use Static Table?<input id="useStaticTableCheckbox" type="checkbox" checked=true />
 <input id="headerTableMaxSizeInput" type="number" min="0" value="4096" />
 <input id="changeHeaderTableMaxSizeButton" type="button"
        value="Change header table max size" />
-
+<input id="getNextHeaderSetButton" type="button" value="Get Next Header Set"/>
 <br />
 
-<textarea id="intermediate" cols="124" rows="12">
-</textarea>
-
+<textarea id="encoderInput" cols="60" rows="20"> </textarea>
+<textarea id="decoderOutput" cols="60" rows="20"> </textarea>
+<textarea id="exampleOutput" cols="70" rows="20"> </textarea>
 <br />
 
-<textarea id="uncompressed" cols="60" rows="20">
-:host: www.google.com
-:method: GET
-:path: /
-:scheme: https
-:version: HTTP/1.1
-accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
-accept-charset: ISO-8859-1,utf-8;q=0.7,*;q=0.3
-accept-encoding: gzip,deflate,sdch
-accept-language: en-US,en;q=0.8
-cache-control: max-age=0
-custom-header: custom-value
-p3p: 
-user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.32 (KHTML, like Gecko) Chrome/27.0.1425.0 Safari/537.32
-</textarea>
-<textarea id="uncompressed2" cols="60" rows="20">
-</textarea>
-
+<textarea id="intermediate" cols="124" rows="12"> </textarea>
 <br />
 
-<textarea id="encoderContext" cols="60" rows="40">
-</textarea>
-<textarea id="decoderContext" cols="60" rows="40">
-</textarea>
-
+<textarea id="encoderContext" cols="60" rows="40"> </textarea>
+<textarea id="decoderContext" cols="60" rows="40"> </textarea>
 <br />
 
 <script>
 'use strict';
 
+var exampleIndex = 0;
 var roundTripButton = document.getElementById('roundTripButton');
+ENCODE_HUFFMAN = 1; // defined in encoding_context.js
 var headerTableMaxSizeInput =
   document.getElementById('headerTableMaxSizeInput');
 var changeHeaderTableMaxSizeButton =
   document.getElementById('changeHeaderTableMaxSizeButton');
 
-var uncompressedTextarea = document.getElementById('uncompressed');
+var encoderInputTextarea = document.getElementById('encoderInput');
+
+encoderInputTextarea.value = formatExampleHeaders(isRequestCheckbox.checked, exampleIndex);
+
 var encoderContextTextarea = document.getElementById('encoderContext');
 var intermediateTextarea = document.getElementById('intermediate');
+var exampleTextarea = document.getElementById('exampleOutput');
 var compressedTextarea = document.getElementById('compressed');
 var decoderContextTextarea = document.getElementById('decoderContext');
-var uncompressed2Textarea = document.getElementById('uncompressed2');
+var decoderOutputTextarea = document.getElementById('decoderOutput');
 
 var headerEncoder = new HeaderEncoder(REQUEST, 4);
 var headerDecoder = new HeaderDecoder(REQUEST);
@@ -66,14 +57,13 @@ var headerDecoder = new HeaderDecoder(REQUEST);
 function headerSetFromString(str) {
   var headerStrs = str.split('\n');
   return headerStrs.map(function(headerStr) {
-    var match = headerStr.match(/^(.*): *(.*)$/);
-    return match ? [match[1], match[2]] : null;
+    var match = headerStr.match(/^(:[^:]{1,}|[^:]{1,}):[ ]*(.*)[ ]*$/);
+    return match ? [match[1].toLowerCase(), match[2]] : null;
   }).filter(function(e) {
     return e;
   });
 }
 
-// TODO(akalin): Handle lower-casing.
 function headerCompare(header1, header2) {
   if (header1[0] < header2[0]) {
     return -1;
@@ -96,7 +86,11 @@ function headerSetToString(headerSet) {
   headerSetCopy.sort(headerCompare);
   for (var i = 0; i < headerSetCopy.length; ++i) {
     var header = headerSetCopy[i];
-    str += header[0] + ': ' + header[1] + '\n';
+    str += header[0] + ':';
+    if (header[1]) {
+      str += ' ' + header[1];
+    }
+    str += '\n';
   }
   return str;
 }
@@ -133,21 +127,96 @@ function escapeOctets(octets) {
   return str;
 }
 
-function doRoundTrip() {
-  var input = uncompressedTextarea.value;
+function octetsToHex(octets, use_spaces) {
+  var str = '';
+  for (var i = 0; i < octets.length; ++i) {
+    var octet = octets[i];
+    if (octet < 16) {
+      str += '0';
+    }
+    str += '' + octet.toString(16);
+    if (use_spaces) str += ' ';
+  }
+  return str;
+}
+
+function hexToOctets(data) {
+  var output = []
+  for (var i = 0; i < data.length; ) {
+    output.push(parseInt(data.slice(i, i + 2), 16));
+    i += 2;
+  }
+  return output;
+}
+
+function formatCodeAsBits(code) {
+  var output = "|";
+  var count = 0;
+  for (var i = code.l - 1; i >= 0; --i) {
+    output += (code.code >> i & 0x1);
+    ++count;
+    if (count == 8) {
+      count = 0;
+      output += '|';
+    }
+  }
+  output += ' [' + code.l + ']';
+  return output;
+}
+
+function formatCodebook(codebook) {
+  var output = '';
+  var padding = '                                           ';
+  for (var i = 0; i < codebook.length; ++i) {
+    var code = codebook[i];
+    var sym = '     ';
+    if (i > 31 && i < 127) {
+      sym += "'" + String.fromCharCode(i) + "'";
+    } else if (i == 256) {
+      sym += "EOS";
+    }
+    sym = sym.slice(-5);
+    var num ='(' + String('   ' + i + ')').slice(-4);
+    var asbits = String(formatCodeAsBits(code) + padding).slice(0, 43);
+    var ashex = String(padding + code.code.toString(16) + " " + "[" + code.l + "]").slice(-12);
+    output += sym + " " + num + " " + asbits + " " + ashex + '\n';
+  }
+  return output;
+}
+
+function octetsToExampleString(octets) {
+  var slice_start = 0;
+  var octets_slice = octets.slice(slice_start, slice_start + 16);
+  var output = '';
+  var padding = '                                                '; // 48 spaces
+  while (slice_start < octets.length) {
+    var octets_slice = octets.slice(slice_start, slice_start + 16);
+    slice_start += 16;
+    var hex_part = octetsToHex(octets_slice, true);
+    var line = String(hex_part + padding).slice(0, 48) + '| ';
+    for (var i = 0; i < octets_slice.length; ++i) {
+      var octet = octets_slice[i];
+      if (octet > 31 && octet < 127) {
+        line += String.fromCharCode(octet);
+      } else {
+        line += '.'
+      }
+    }
+    output += line + '\n';
+  }
+
+  return output;
+}
+
+function doEncode() {
+  //console.log("Doing Encoding");
+  var input = encoderInputTextarea.value;
   var headerSet = headerSetFromString(input);
-
   var encodedHeaderSet = [];
-  var deserializedHeaderSet = [];
-
   var error = null;
-
   try {
+    //console.log("");
     encodedHeaderSet = headerEncoder.encodeHeaderSet(headerSet);
-
-    headerDecoder.decodeHeaderSet(encodedHeaderSet, function(name, value) {
-      deserializedHeaderSet.push([ name, value ]);
-    });
   } catch (e) {
     error = {
       name: e.name,
@@ -155,15 +224,71 @@ function doRoundTrip() {
       stack: e.stack
     };
   }
+  // Assign to intermediate.
+  var encodedHeaderSetStr = octetsToHex(encodedHeaderSet);
+  var encodedHeaderSetStrSize = encodedHeaderSet.length;
+  var intermediate = {
+    inputLen: input.length,
+    outputLength: encodedHeaderSetStrSize,
+    PercentageOfOriginalSize: (100 * encodedHeaderSetStrSize / input.length),
+    output: encodedHeaderSetStr,
+    error: error
+  };
+  intermediateTextarea.textContent = JSON.stringify(intermediate, null, '  ');
+  encoderContextTextarea.textContent =
+    JSON.stringify(headerEncoder.encodingContext_, null, '  ');
+  //console.log("Encoded.");
+}
 
-  var inputLength = 0;
-  for (var i = 0; i < headerSet.length; ++i) {
-    inputLength += headerSet[i][0].length;
-    inputLength += headerSet[i][1].length;
+function doDecode() {
+  //console.log("Decoding");
+  var intermediate = JSON.parse(intermediateTextarea.textContent);
+  var encodedHeaderSet = hexToOctets(intermediate.output);
+  var error = null;
+  var deserializedHeaderSet = []; // parse from intermediate.
+  var formattedOpcodes = "";
+
+  if (intermediate.error != null) {
+    alert("Not decoding because the intermediate had an error in it!");
+    return;
   }
-  var encodedHeaderSetStr = escapeOctets(encodedHeaderSet);
+  try {
+    formattedOpcodes =
+      headerDecoder.decodeHeaderSet(encodedHeaderSet, function(name, value) {
+        deserializedHeaderSet.push([ name, value ]);
+    });
+  } catch (e) {
+    error = {
+      name: e.name,
+      message: e.message,
+      stack: e.stack
+    };
+    alert(JSON.stringify(error));
+  }
+
+  decoderContextTextarea.textContent =
+    JSON.stringify(headerDecoder.encodingContext_, null, '  ');
+  var outputHeaders = headerSetToString(deserializedHeaderSet);
+  decoderOutputTextarea.value = outputHeaders;
+  exampleTextarea.value += "# Header set to be encoded\n";
+  exampleTextarea.value += encoderInput.value;
+  exampleTextarea.value += "\n# Hexdump of encoded data which will be decoded\n";
+  exampleTextarea.value += octetsToExampleString(encodedHeaderSet) + '\n';
+  exampleTextarea.value += "# Decoded opcodes\n";
+  exampleTextarea.value += formattedOpcodes + '\n';
+  exampleTextarea.value += "# Decoded header set\n";
+  exampleTextarea.value += outputHeaders + '\n';
+  exampleTextarea.value += '#########################\n\n';
+  exampleTextarea.scrollTop = exampleTextarea.scrollHeight;  // scroll to bottom
+  //console.log("Decoded");
+}
+
+function doCompareInputToOutput() {
+  var intermediate = JSON.parse(intermediateTextarea.textContent);
+  var encodedHeaderSet = hexToOctets(intermediate.output);
   var outputLength = encodedHeaderSet.length;
-  var compressionRatio = inputLength / outputLength;
+  var inputLength = intermediate.inputLength;
+  var compressionRatio = outputLength / inputLength;
   var headerSetsEqualValue = headerSetsEqual(headerSet, deserializedHeaderSet);
   var contextsEqual =
     headerEncoder.encodingContext_.equals(headerDecoder.encodingContext_);
@@ -176,17 +301,11 @@ function doRoundTrip() {
     contextsEqual: contextsEqual,
     error: error
   };
-  intermediateTextarea.textContent = JSON.stringify(intermediate, null, '  ');
+}
 
-  uncompressedTextarea.value = headerSetToString(headerSet);
-
-  uncompressed2Textarea.value = headerSetToString(deserializedHeaderSet);
-
-  encoderContextTextarea.textContent =
-    JSON.stringify(headerEncoder.encodingContext_, null, '  ');
-
-  decoderContextTextarea.textContent =
-    JSON.stringify(headerDecoder.encodingContext_, null, '  ');
+function doRoundTrip() {
+  doEncode();
+  doDecode();
 }
 
 function doChangeHeaderTableMaxSize() {
@@ -209,8 +328,35 @@ function doChangeHeaderTableMaxSize() {
     JSON.stringify(headerDecoder.encodingContext_, null, '  ');
 }
 
-roundTripButton.addEventListener('click', doRoundTrip, false);
+exampleTextarea.value += "CLIENT->SERVER Direction\n";
+exampleTextarea.value += formatCodebook(CLIENT_TO_SERVER_CODEBOOK);
+exampleTextarea.value += "SERVER->CLIENT Direction\n";
+exampleTextarea.value += formatCodebook(SERVER_TO_CLIENT_CODEBOOK);
 
+function setIS_REQUEST() {
+  IS_REQUEST = isRequestCheckbox.checked;
+}
+
+function setENCODE_HUFFMAN() {
+  ENCODE_HUFFMAN = useHuffmanCheckbox.checked;
+}
+
+function setUSE_STATIC_TABLE() {
+  USE_STATIC_TABLE = useStaticTableCheckbox.checked;
+}
+
+function doGetNextHeaderSet() {
+  exampleIndex += 1;
+  encoderInputTextarea.value = formatExampleHeaders(isRequestCheckbox.checked, exampleIndex);
+}
+
+roundTripButton.addEventListener('click', doRoundTrip, false);
+encodeButton.addEventListener('click', doEncode, false);
+decodeButton.addEventListener('click', doDecode, false);
+isRequestCheckbox.addEventListener('click', setIS_REQUEST, false);
+useHuffmanCheckbox.addEventListener('click', setENCODE_HUFFMAN, false);
+useStaticTableCheckbox.addEventListener('click', setUSE_STATIC_TABLE, false);
 changeHeaderTableMaxSizeButton.addEventListener(
   'click', doChangeHeaderTableMaxSize, false);
+getNextHeaderSetButton.addEventListener('click', doGetNextHeaderSet, false);
 </script>

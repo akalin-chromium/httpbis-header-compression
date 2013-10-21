@@ -14,32 +14,49 @@ Encoder.prototype.encodeOctet = function(o) {
 // encoded integer.
 Encoder.prototype.encodeInteger = function(opCode, N, I) {
   var nextMarker = (1 << N) - 1;
+  var octets = [];
+  var origI = I;
 
   if (I < nextMarker) {
+    octets.push((opCode << N) | I);
     this.encodeOctet((opCode << N) | I);
+    //console.log("Encoding: ", origI, " on ", N, " bits with prefixVal: ", opCode, " output: ", octets);
     return;
   }
 
   if (N > 0) {
+    octets.push((opCode << N) | nextMarker);
     this.encodeOctet((opCode << N) | nextMarker);
   }
 
   I -= nextMarker;
   while (I >= 128) {
+    octets.push(I % 128 | 128);
     this.encodeOctet(I % 128 | 128);
     // Divide I by 128. (Remember that / in JavaScript is
     // floating-point division).
     I >>= 7;
   }
+  octets.push(I);
   this.encodeOctet(I);
+  //console.log("Encoding: ", origI, " on ", N, " bits with prefixVal: ", opCode, " output: ", octets);
 }
 
 // Encodes the given octet sequence represented by a string as a
 // length-prefixed octet sequence.
 Encoder.prototype.encodeOctetSequence = function(str) {
-  this.encodeInteger(0, 0, str.length);
-  for (var i = 0; i < str.length; ++i) {
-    this.encodeOctet(str.charCodeAt(i));
+  var str_to_encode = str;
+  if (ENCODE_HUFFMAN) {
+    var code_table = CLIENT_TO_SERVER_CODEBOOK;
+    if (!IS_REQUEST) {
+      code_table = SERVER_TO_CLIENT_CODEBOOK;
+    }
+    str_to_encode = String.fromCharCode.apply(String, encodeBYTES(str, code_table));
+  }
+  //console.log("str: ", str, " len: ", str_to_encode.length, " is request: ", IS_REQUEST,  " str_to_encode: ", str_to_encode);
+  this.encodeInteger(ENCODE_HUFFMAN, 7, str_to_encode.length);
+  for (var i = 0; i < str_to_encode.length; ++i) {
+    this.encodeOctet(str_to_encode.charCodeAt(i));
   }
 }
 
@@ -48,7 +65,7 @@ Encoder.prototype.encodeOctetSequence = function(str) {
 
 // Encode an indexed header as described in 4.2.
 Encoder.prototype.encodeIndexedHeader = function(index) {
-  this.encodeInteger(INDEX_OPCODE, INDEX_N, index);
+  this.encodeInteger(INDEX_VALUE, INDEX_N, index);
 }
 
 // Encode a literal header without indexing as described in 4.3.1.
@@ -56,13 +73,13 @@ Encoder.prototype.encodeLiteralHeaderWithoutIndexing = function(
   indexOrName, value) {
   switch (typeof indexOrName) {
     case 'number':
-      this.encodeInteger(LITERAL_NO_INDEX_OPCODE, LITERAL_NO_INDEX_N,
+      this.encodeInteger(LITERAL_NO_INDEX_VALUE, LITERAL_NO_INDEX_N,
                          indexOrName + 1);
       this.encodeOctetSequence(value);
       return;
 
     case 'string':
-      this.encodeInteger(LITERAL_NO_INDEX_OPCODE, LITERAL_NO_INDEX_N, 0);
+      this.encodeInteger(LITERAL_NO_INDEX_VALUE, LITERAL_NO_INDEX_N, 0);
       this.encodeOctetSequence(indexOrName);
       this.encodeOctetSequence(value);
       return;
@@ -77,39 +94,15 @@ Encoder.prototype.encodeLiteralHeaderWithIncrementalIndexing = function(
   indexOrName, value) {
   switch (typeof indexOrName) {
     case 'number':
-      this.encodeInteger(LITERAL_INCREMENTAL_OPCODE, LITERAL_INCREMENTAL_N,
+      this.encodeInteger(LITERAL_INCREMENTAL_VALUE, LITERAL_INCREMENTAL_N,
                          indexOrName + 1);
       this.encodeOctetSequence(value);
       return;
 
     case 'string':
-      this.encodeInteger(LITERAL_INCREMENTAL_OPCODE, LITERAL_INCREMENTAL_N,
+      this.encodeInteger(LITERAL_INCREMENTAL_VALUE, LITERAL_INCREMENTAL_N,
                          0);
       this.encodeOctetSequence(indexOrName);
-      this.encodeOctetSequence(value);
-      return;
-  }
-
-  throw new Error('not an index or name: ' + indexOrName);
-}
-
-// Encode a literal header with substitution indexing as described in
-// 4.3.3.
-Encoder.prototype.encodeLiteralHeaderWithSubstitutionIndexing = function(
-  indexOrName, substitutedIndex, value) {
-  switch (typeof indexOrName) {
-    case 'number':
-      this.encodeInteger(LITERAL_SUBSTITUTION_OPCODE, LITERAL_SUBSTITUTION_N,
-                         indexOrName + 1);
-      this.encodeInteger(0, 0, substitutedIndex);
-      this.encodeOctetSequence(value);
-      return;
-
-    case 'string':
-      this.encodeInteger(LITERAL_SUBSTITUTION_OPCODE, LITERAL_SUBSTITUTION_N,
-                         0);
-      this.encodeOctetSequence(indexOrName);
-      this.encodeInteger(0, 0, substitutedIndex);
       this.encodeOctetSequence(value);
       return;
   }
@@ -144,7 +137,6 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
   if (!isValidHeaderValue(value)) {
     throw new Error('Invalid header value: ' + value);
   }
-
   // Touches are used below to track how many times a header has been
   // explicitly encoded.
 
@@ -184,17 +176,20 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
           // time this header was encountered (when it wasn't
           // explicitly encoded), and one for this time.
           for (var i = 0; i < 2; ++i) {
+            //console.log("explicitlyEmitReferenceIndex: ", nameValueIndex);
             explicitlyEmitReferenceIndex(nameValueIndex);
           }
         } else {
           // We've encoded this header once for each time this was
           // encountered previously, so emit the index just once for
           // this time.
+          //console.log("explicitlyEmitReferenceIndex: ", nameValueIndex);
           explicitlyEmitReferenceIndex(nameValueIndex);
         }
       } else {
         // Mark that we've encountered this header once and explicitly
         // encoded it (since it wasn't in the reference set).
+        //console.log("encodeIndexedHeader: ", nameValueIndex);
         encoder.encodeIndexedHeader(nameValueIndex);
         this.encodingContext_.processIndexedHeader(nameValueIndex);
         this.encodingContext_.addTouches(nameValueIndex, 1);
@@ -212,34 +207,23 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
 
   // Used below when processing literal headers that may evict entries
   // in the reference set.
-  var onReferenceSetRemoval = function(referenceIndex) {
-    if (this.encodingContext_.getTouchCount(referenceIndex) == 0) {
-      // The implicitly emitted entry at referenceIndex will be
-      // removed, so explicitly emit it.
-      explicitlyEmitReferenceIndex(referenceIndex);
-    }
-  }.bind(this);
+  var onReferenceSetRemoval = function(referenceIndex) { }.bind(this)
+  //   if (this.encodingContext_.getTouchCount(referenceIndex) == 0) {
+  //     // The implicitly emitted entry at referenceIndex will be
+  //     // removed, so explicitly emit it.
+  //     explicitlyEmitReferenceIndex(referenceIndex);
+  //   }
+  // }.bind(this);
 
-  if ((this.compressionLevel_ > 2) && (index >= 0)) {
-    // If the header name is already in the header table, use
-    // substitution indexing.
-    var storedIndex =
-      this.encodingContext_.processLiteralHeaderWithSubstitutionIndexing(
-        name, index, value, onReferenceSetRemoval);
-    encoder.encodeLiteralHeaderWithSubstitutionIndexing(index, index, value);
-    if (storedIndex >= 0) {
-      this.encodingContext_.addTouches(storedIndex, 1);
-    }
-    return;
-  }
-
-  if ((this.compressionLevel_ > 3) && (index < 0)) {
+  var indexOrName = (index >= 0) ? index : name;
+  if ((this.compressionLevel_ > 3)) {
     // If the header name is not already in the header table, use
     // incremental indexing.
+    //console.log("processLiteralHeaderWithIncrementalIndexing: ", name, value);
     var storedIndex =
       this.encodingContext_.processLiteralHeaderWithIncrementalIndexing(
         name, value, onReferenceSetRemoval);
-    encoder.encodeLiteralHeaderWithIncrementalIndexing(name, value);
+    encoder.encodeLiteralHeaderWithIncrementalIndexing(indexOrName, value);
     if (storedIndex >= 0) {
       this.encodingContext_.addTouches(storedIndex, 1);
     }
@@ -247,7 +231,7 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
   }
 
   // Don't index at all.
-  var indexOrName = (index >= 0) ? index : name;
+  //console.log("encodeLiteralHeaderWithoutIndexing: ", indexOrName, value);
   encoder.encodeLiteralHeaderWithoutIndexing(indexOrName, value);
 };
 
@@ -256,8 +240,16 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
 HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
   var encoder = new Encoder();
   for (var i = 0; i < headerSet.length; ++i) {
-    var nameValuePair = headerSet[i];
-    this.encodeHeader_(encoder, nameValuePair[0], nameValuePair[1]);
+    var key = headerSet[i][0];
+    var value = headerSet[i][1];
+    var values = [value];
+    if (key == "cookie") {
+      // TODO: Enable this functionality with a button.
+      //values = value.split('; ');
+    }
+    for (var j = 0; j < values.length; ++j) {
+      this.encodeHeader_(encoder, key, values[j]);
+    }
   }
 
   // Remove each header not in the just-encoded header set from the
