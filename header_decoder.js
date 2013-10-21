@@ -57,7 +57,7 @@ function formatOpcode(opFields) {
 }
 
 Decoder.prototype.finishedCurrentOpcode = function() {
-  console.log(formatOpcode(this.currentOpcode_));
+  //console.log(formatOpcode(this.currentOpcode_));
   this.opcodeStack_.push(this.currentOpcode_);
   this.currentOpcode_ = [];
 }

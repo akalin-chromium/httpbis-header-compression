@@ -220,13 +220,13 @@ function octetsToExampleString(octets) {
 }
 
 function doEncode() {
-  console.log("Doing Encoding");
+  //console.log("Doing Encoding");
   var input = encoderInputTextarea.value;
   var headerSet = headerSetFromString(input);
   var encodedHeaderSet = [];
   var error = null;
   try {
-    console.log("");
+    //console.log("");
     encodedHeaderSet = headerEncoder.encodeHeaderSet(headerSet);
   } catch (e) {
     error = {
@@ -248,11 +248,11 @@ function doEncode() {
   intermediateTextarea.textContent = JSON.stringify(intermediate, null, '  ');
   encoderContextTextarea.textContent =
     JSON.stringify(headerEncoder.encodingContext_, null, '  ');
-  console.log("Encoded.");
+  //console.log("Encoded.");
 }
 
 function doDecode() {
-  console.log("Decoding");
+  //console.log("Decoding");
   var intermediate = JSON.parse(intermediateTextarea.textContent);
   var encodedHeaderSet = hexToOctets(intermediate.output);
   var error = null;
@@ -286,7 +286,7 @@ function doDecode() {
   exampleTextarea.value += outputHeaders + '\n';
   exampleTextarea.value += '#########################\n\n';
   exampleTextarea.scrollTop = exampleTextarea.scrollHeight;  // scroll to bottom
-  console.log("Decoded");
+  //console.log("Decoded");
 }
 
 function doCompareInputToOutput() {

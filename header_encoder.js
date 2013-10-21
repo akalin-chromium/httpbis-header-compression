@@ -20,7 +20,7 @@ Encoder.prototype.encodeInteger = function(opCode, N, I) {
   if (I < nextMarker) {
     octets.push((opCode << N) | I);
     this.encodeOctet((opCode << N) | I);
-    console.log("Encoding: ", origI, " on ", N, " bits with prefixVal: ", opCode, " output: ", octets);
+    //console.log("Encoding: ", origI, " on ", N, " bits with prefixVal: ", opCode, " output: ", octets);
     return;
   }
 
@@ -39,7 +39,7 @@ Encoder.prototype.encodeInteger = function(opCode, N, I) {
   }
   octets.push(I);
   this.encodeOctet(I);
-  console.log("Encoding: ", origI, " on ", N, " bits with prefixVal: ", opCode, " output: ", octets);
+  //console.log("Encoding: ", origI, " on ", N, " bits with prefixVal: ", opCode, " output: ", octets);
 }
 
 // Encodes the given octet sequence represented by a string as a
@@ -53,7 +53,7 @@ Encoder.prototype.encodeOctetSequence = function(str) {
     }
     str_to_encode = String.fromCharCode.apply(String, encodeBYTES(str, code_table));
   }
-  console.log("str: ", str, " len: ", str_to_encode.length, " is request: ", IS_REQUEST,  " str_to_encode: ", str_to_encode);
+  //console.log("str: ", str, " len: ", str_to_encode.length, " is request: ", IS_REQUEST,  " str_to_encode: ", str_to_encode);
   this.encodeInteger(ENCODE_HUFFMAN, 7, str_to_encode.length);
   for (var i = 0; i < str_to_encode.length; ++i) {
     this.encodeOctet(str_to_encode.charCodeAt(i));
@@ -137,7 +137,7 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
   if (!isValidHeaderValue(value)) {
     throw new Error('Invalid header value: ' + value);
   }
-  console.log("Encoding: ", name, value);
+  //console.log("Encoding: ", name, value);
 
   // Touches are used below to track how many times a header has been
   // explicitly encoded.
@@ -178,20 +178,20 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
           // time this header was encountered (when it wasn't
           // explicitly encoded), and one for this time.
           for (var i = 0; i < 2; ++i) {
-            console.log("explicitlyEmitReferenceIndex: ", nameValueIndex);
+            //console.log("explicitlyEmitReferenceIndex: ", nameValueIndex);
             explicitlyEmitReferenceIndex(nameValueIndex);
           }
         } else {
           // We've encoded this header once for each time this was
           // encountered previously, so emit the index just once for
           // this time.
-          console.log("explicitlyEmitReferenceIndex: ", nameValueIndex);
+          //console.log("explicitlyEmitReferenceIndex: ", nameValueIndex);
           explicitlyEmitReferenceIndex(nameValueIndex);
         }
       } else {
         // Mark that we've encountered this header once and explicitly
         // encoded it (since it wasn't in the reference set).
-        console.log("encodeIndexedHeader: ", nameValueIndex);
+        //console.log("encodeIndexedHeader: ", nameValueIndex);
         encoder.encodeIndexedHeader(nameValueIndex);
         this.encodingContext_.processIndexedHeader(nameValueIndex);
         this.encodingContext_.addTouches(nameValueIndex, 1);
@@ -221,7 +221,7 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
   if ((this.compressionLevel_ > 3)) {
     // If the header name is not already in the header table, use
     // incremental indexing.
-    console.log("processLiteralHeaderWithIncrementalIndexing: ", name, value);
+    //console.log("processLiteralHeaderWithIncrementalIndexing: ", name, value);
     var storedIndex =
       this.encodingContext_.processLiteralHeaderWithIncrementalIndexing(
         name, value, onReferenceSetRemoval);
@@ -233,7 +233,7 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
   }
 
   // Don't index at all.
-  console.log("encodeLiteralHeaderWithoutIndexing: ", indexOrName, value);
+  //console.log("encodeLiteralHeaderWithoutIndexing: ", indexOrName, value);
   encoder.encodeLiteralHeaderWithoutIndexing(indexOrName, value);
 };
 
