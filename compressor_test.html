@@ -241,7 +241,7 @@ function doEncode() {
   var intermediate = {
     inputLen: input.length,
     outputLength: encodedHeaderSetStrSize,
-    compressionRatio: encodedHeaderSetStrSize / input.length,
+    PercentageOfOriginalSize: (100 * encodedHeaderSetStrSize / input.length),
     output: encodedHeaderSetStr,
     error: error
   };
