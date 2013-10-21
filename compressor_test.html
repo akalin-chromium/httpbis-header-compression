@@ -1,3 +1,4 @@
+<script src="example_requests_and_responses.js"></script>
 <script src="freq_tables.js"></script>
 <script src="huffman.js"></script>
 <script src="encoding_context.js"></script>
@@ -13,27 +14,11 @@ Use Static Table?<input id="useStaticTableCheckbox" type="checkbox" checked=true
 <input id="headerTableMaxSizeInput" type="number" min="0" value="4096" />
 <input id="changeHeaderTableMaxSizeButton" type="button"
        value="Change header table max size" />
-
+<input id="getNextHeaderSetButton" type="button" value="Get Next Header Set"/>
 <br />
 
-<textarea id="encoderInput" cols="60" rows="20">
-:authority: www.google.com
-:method: GET
-:path: /
-:scheme: https
-:version: HTTP/1.1
-accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
-accept-charset: ISO-8859-1,utf-8;q=0.7,*;q=0.3
-accept-encoding: gzip,deflate,sdch
-accept-language: en-US,en;q=0.8
-cache-control: max-age=0
-custom-header: custom-value
-p3p:
-user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.32 (KHTML, like Gecko) Chrome/27.0.1425.0 Safari/537.32
-</textarea>
-
+<textarea id="encoderInput" cols="60" rows="20"> </textarea>
 <textarea id="decoderOutput" cols="60" rows="20"> </textarea>
-<!-- 70 = 16*3 + 2 + 16 + padding (For scrollbar)-->
 <textarea id="exampleOutput" cols="70" rows="20"> </textarea>
 <br />
 
@@ -47,6 +32,7 @@ user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.32 (KHTML, like Geck
 <script>
 'use strict';
 
+var exampleIndex = 0;
 var roundTripButton = document.getElementById('roundTripButton');
 ENCODE_HUFFMAN = 1; // defined in encoding_context.js
 var headerTableMaxSizeInput =
@@ -55,6 +41,9 @@ var changeHeaderTableMaxSizeButton =
   document.getElementById('changeHeaderTableMaxSizeButton');
 
 var encoderInputTextarea = document.getElementById('encoderInput');
+
+encoderInputTextarea.value = formatExampleHeaders(isRequestCheckbox.checked, exampleIndex);
+
 var encoderContextTextarea = document.getElementById('encoderContext');
 var intermediateTextarea = document.getElementById('intermediate');
 var exampleTextarea = document.getElementById('exampleOutput');
@@ -281,8 +270,13 @@ function doDecode() {
     JSON.stringify(headerDecoder.encodingContext_, null, '  ');
   var outputHeaders = headerSetToString(deserializedHeaderSet);
   decoderOutputTextarea.value = outputHeaders;
+  exampleTextarea.value += "# Header set to be encoded\n";
+  exampleTextarea.value += encoderInput.value;
+  exampleTextarea.value += "\n# Hexdump of encoded data which will be decoded\n";
   exampleTextarea.value += octetsToExampleString(encodedHeaderSet) + '\n';
+  exampleTextarea.value += "# Decoded opcodes\n";
   exampleTextarea.value += formattedOpcodes + '\n';
+  exampleTextarea.value += "# Decoded header set\n";
   exampleTextarea.value += outputHeaders + '\n';
   exampleTextarea.value += '#########################\n\n';
   exampleTextarea.scrollTop = exampleTextarea.scrollHeight;  // scroll to bottom
@@ -351,6 +345,11 @@ function setUSE_STATIC_TABLE() {
   USE_STATIC_TABLE = useStaticTableCheckbox.checked;
 }
 
+function doGetNextHeaderSet() {
+  exampleIndex += 1;
+  encoderInputTextarea.value = formatExampleHeaders(isRequestCheckbox.checked, exampleIndex);
+}
+
 roundTripButton.addEventListener('click', doRoundTrip, false);
 encodeButton.addEventListener('click', doEncode, false);
 decodeButton.addEventListener('click', doDecode, false);
@@ -359,4 +358,5 @@ useHuffmanCheckbox.addEventListener('click', setENCODE_HUFFMAN, false);
 useStaticTableCheckbox.addEventListener('click', setUSE_STATIC_TABLE, false);
 changeHeaderTableMaxSizeButton.addEventListener(
   'click', doChangeHeaderTableMaxSize, false);
+getNextHeaderSetButton.addEventListener('click', doGetNextHeaderSet, false);
 </script>

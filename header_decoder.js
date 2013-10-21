@@ -29,28 +29,34 @@ function octetsToHex(octets, use_spaces) {
 }
 
 function formatOpcode(opFields) {
-  // format this: [ {fieldName: 'blah', otherKey: foo}, {fieldname...} ]
+  // opFields, [operation, ... operation]
+  // operation, {name: 'blah', data: {key1: foo, key2: ...} }
   var output = '';
+  var cols = 0;
+
+  function addSpaces(numSpaces) {
+    for (var k = 0; k < numSpaces; ++k) output += ' ';
+    cols += numSpaces;
+  }
+  //console.log(opFields);
+  var tabLen = 0;
   for (var i = 0; i < opFields.length; ++i) {
-    var field = opFields[i];
-    if (field.fieldName) {
-      output += field.fieldName + ': [';
-    }
-    var keys = []
-    for (var key in field) {
-      if (key == 'fieldName') continue;
-      keys.push(key);
-    }
-    for (var j = 0; j < keys.length; ++j) {
-      var key = keys[j];
-      var data = field[key];
+    var name = opFields[i].name;
+    var data = opFields[i].data;
+    addSpaces(tabLen);
+    output += name + ':\n';
+    tabLen = 4;
+    for (var key in data) {
+      var entry = data[key];
       if (key == "encoded") {
-        data = '"' + octetsToHex(data) + '"';
+        entry = '"' + octetsToHex(entry) + '"';
+      } else {
+        entry = entry.toString();
       }
-      output += key + ': ' + data;
-      if (j + 1 < keys.length) output += ', ';
+      addSpaces(tabLen + 4);
+      output += key + ': ' + entry + '\n';
     }
-    output += ']\n ';
+    tabLen = 4;
   }
 
   return output;
@@ -115,10 +121,11 @@ Decoder.prototype.decodeNextInteger_ = function(N, description) {
   }
   I += R;
   var data = this.buffer_.slice(start, this.i_);
-  this.pushOntoCurrentOpcode( {fieldName: description,
-                               prefixLen: N,
+  this.pushOntoCurrentOpcode( {name: description,
+                               data: {
+                               //prefixLen: N,
                                encoded: data,
-                               decoded: I} );
+                               decoded: I}} );
   //console.log("Decoded", description, ": ", I, "from: ", this.buffer_.slice(start, this.i_));
   return I;
 };
@@ -144,10 +151,11 @@ Decoder.prototype.decodeNextOctetSequence_ = function(description) {
       str += String.fromCharCode(nextOctet);
     }
   }
-  this.pushOntoCurrentOpcode( { fieldName: description,
-                                is_huffman_encoded: is_huffman_encoded,
-                                encoded: data,
-                                decoded: '"' + str + '"'} );
+  this.pushOntoCurrentOpcode( { name: description,
+                                data: {
+                                  is_huffman_encoded: is_huffman_encoded,
+                                  encoded: data,
+                                  decoded: '"' + str + '"'}} );
   //console.log("Decoded str: ", str, " len: ", length,
   //            "is_huffman_encoded: ", is_huffman_encoded,
   //            "is_request: ", IS_REQUEST, "from: ", data);
@@ -200,9 +208,11 @@ Decoder.prototype.processNextHeaderRepresentation = function() {
   var opcodeStartIndex = this.i_;
   var opcode = determineOpcode(nextOctet);
 
-  this.pushOntoCurrentOpcode({fieldName: opcode.name,
-                              opcodeLengthInBits: opcode.opcode_len,
-                              discoveredFromPeekingAtByte: "'" + octetsToHex([nextOctet]) + "'"});
+  this.pushOntoCurrentOpcode({name: opcode.name,
+                              data: {
+                                opcodeLengthInBits: opcode.opcode_len,
+                                discoveredFromPeekingAtByte:
+                                        "'" + octetsToHex([nextOctet]) + "'"}});
   // Touches are used below to track which headers have been emitted.
   switch (opcode) {
     case OPCODES.INDEX_OPCODE:

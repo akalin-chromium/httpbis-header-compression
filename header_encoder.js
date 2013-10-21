@@ -137,8 +137,6 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
   if (!isValidHeaderValue(value)) {
     throw new Error('Invalid header value: ' + value);
   }
-  //console.log("Encoding: ", name, value);
-
   // Touches are used below to track how many times a header has been
   // explicitly encoded.
 
@@ -242,8 +240,16 @@ HeaderEncoder.prototype.encodeHeader_ = function(encoder, name, value) {
 HeaderEncoder.prototype.encodeHeaderSet = function(headerSet) {
   var encoder = new Encoder();
   for (var i = 0; i < headerSet.length; ++i) {
-    var nameValuePair = headerSet[i];
-    this.encodeHeader_(encoder, nameValuePair[0], nameValuePair[1]);
+    var key = headerSet[i][0];
+    var value = headerSet[i][1];
+    var values = [value];
+    if (key == "cookie") {
+      // TODO: Enable this functionality with a button.
+      //values = value.split('; ');
+    }
+    for (var j = 0; j < values.length; ++j) {
+      this.encodeHeader_(encoder, key, values[j]);
+    }
   }
 
   // Remove each header not in the just-encoded header set from the
