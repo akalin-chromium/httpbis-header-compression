@@ -7,9 +7,9 @@
 <input id="roundTripButton" type="button" value="Round-trip" />
 <input id="encodeButton" type="button" value="Encode" />
 <input id="decodeButton" type="button" value="Decode" />
-Is Request?<input id="isRequestCheckbox" type="checkbox" checked=true />
-Use Huffman?<input id="useHuffmanCheckbox" type="checkbox" checked=true />
-Use Static Table?<input id="useStaticTable" type="checkbox" checked=true />
+Is Request?<input id="isRequestCheckbox" type="checkbox" checked=true />&nbsp;
+Use Huffman?<input id="useHuffmanCheckbox" type="checkbox" checked=true />&nbsp;
+Use Static Table?<input id="useStaticTableCheckbox" type="checkbox" checked=true />
 <input id="headerTableMaxSizeInput" type="number" min="0" value="4096" />
 <input id="changeHeaderTableMaxSizeButton" type="button"
        value="Change header table max size" />
@@ -240,8 +240,9 @@ function doEncode() {
   var encodedHeaderSetStrSize = encodedHeaderSet.length;
   var intermediate = {
     inputLen: input.length,
-    output: encodedHeaderSetStr,
     outputLength: encodedHeaderSetStrSize,
+    compressionRatio: encodedHeaderSetStrSize / input.length,
+    output: encodedHeaderSetStr,
     error: error
   };
   intermediateTextarea.textContent = JSON.stringify(intermediate, null, '  ');
@@ -346,11 +347,16 @@ function setENCODE_HUFFMAN() {
   ENCODE_HUFFMAN = useHuffmanCheckbox.checked;
 }
 
+function setUSE_STATIC_TABLE() {
+  USE_STATIC_TABLE = useStaticTableCheckbox.checked;
+}
+
 roundTripButton.addEventListener('click', doRoundTrip, false);
 encodeButton.addEventListener('click', doEncode, false);
 decodeButton.addEventListener('click', doDecode, false);
 isRequestCheckbox.addEventListener('click', setIS_REQUEST, false);
 useHuffmanCheckbox.addEventListener('click', setENCODE_HUFFMAN, false);
+useStaticTableCheckbox.addEventListener('click', setUSE_STATIC_TABLE, false);
 changeHeaderTableMaxSizeButton.addEventListener(
   'click', doChangeHeaderTableMaxSize, false);
 </script>

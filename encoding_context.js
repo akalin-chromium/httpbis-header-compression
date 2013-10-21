@@ -6,8 +6,9 @@ var SERVER_TO_CLIENT_CODEBOOK = buildCodebook(SERVER_TO_CLIENT_FREQ_TABLE);
 var INVERSE_CLIENT_TO_SERVER_CODEBOOK = buildInverseCodebook(CLIENT_TO_SERVER_CODEBOOK);
 var INVERSE_SERVER_TO_CLIENT_CODEBOOK = buildInverseCodebook(SERVER_TO_CLIENT_CODEBOOK);
 
-var ENCODE_HUFFMAN = 0; // 1 to enable, 0 to disable.
+var ENCODE_HUFFMAN = 1;
 var IS_REQUEST = 1;     // 1 implies request. 0 implies response.
+var USE_STATIC_TABLE = 1;
 
 // For simplicity, we assume that the character codes of a string
 // represent an octet sequence. This implies that strings with
@@ -41,65 +42,65 @@ var RESPONSE = 1;
 
 // From Appendix C
 var STATIC_HEADER_TABLE = [
-  [":authority"                  , ""           ], // 0
-  [":method"                     , "GET"        ], // 1
-  [":method"                     , "POST"       ], // 2
-  [":path"                       , "/"          ], // 3
-  [":path"                       , "/index.html"], // 4
-  [":scheme"                     , "http"       ], // 5
-  [":scheme"                     , "https"      ], // 6
-  [":status"                     , "200"        ], // 7
-  [":status"                     , "500"        ], // 8
-  [":status"                     , "404"        ], // 9
-  [":status"                     , "403"        ], // 10
-  [":status"                     , "400"        ], // 11
-  [":status"                     , "401"        ], // 12
-  ["accept-charset"              , ""           ], // 13
-  ["accept-encoding"             , ""           ], // 14
-  ["accept-language"             , ""           ], // 15
-  ["accept-ranges"               , ""           ], // 16
-  ["accept"                      , ""           ], // 17
-  ["access-control-allow-origin" , ""           ], // 18
-  ["age"                         , ""           ], // 19
-  ["allow"                       , ""           ], // 20
-  ["authorization"               , ""           ], // 21
-  ["cache-control"               , ""           ], // 22
-  ["content-disposition"         , ""           ], // 23
-  ["content-encoding"            , ""           ], // 24
-  ["content-language"            , ""           ], // 25
-  ["content-length"              , ""           ], // 26
-  ["content-location"            , ""           ], // 27
-  ["content-range"               , ""           ], // 28
-  ["content-type"                , ""           ], // 29
-  ["cookie"                      , ""           ], // 30
-  ["date"                        , ""           ], // 31
-  ["etag"                        , ""           ], // 32
-  ["expect"                      , ""           ], // 33
-  ["expires"                     , ""           ], // 34
-  ["from"                        , ""           ], // 35
-  ["if-match"                    , ""           ], // 36
-  ["if-modified-since"           , ""           ], // 37
-  ["if-none-match"               , ""           ], // 38
-  ["if-range"                    , ""           ], // 39
-  ["if-unmodified-since"         , ""           ], // 40
-  ["last-modified"               , ""           ], // 41
-  ["link"                        , ""           ], // 42
-  ["location"                    , ""           ], // 43
-  ["max-forwards"                , ""           ], // 44
-  ["proxy-authenticate"          , ""           ], // 45
-  ["proxy-authorization"         , ""           ], // 46
-  ["range"                       , ""           ], // 47
-  ["referer"                     , ""           ], // 48
-  ["refresh"                     , ""           ], // 49
-  ["retry-after"                 , ""           ], // 50
-  ["server"                      , ""           ], // 51
-  ["set-cookie"                  , ""           ], // 52
-  ["strict-transport-security"   , ""           ], // 53
-  ["transfer-encoding"           , ""           ], // 54
-  ["user-agent"                  , ""           ], // 55
-  ["vary"                        , ""           ], // 56
-  ["via"                         , ""           ], // 57
-  ["www-authenticate"            , ""           ], // 58
+  {name: ":authority"                  , value: ""           }, // 0
+  {name: ":method"                     , value: "GET"        }, // 1
+  {name: ":method"                     , value: "POST"       }, // 2
+  {name: ":path"                       , value: "/"          }, // 3
+  {name: ":path"                       , value: "/index.html"}, // 4
+  {name: ":scheme"                     , value: "http"       }, // 5
+  {name: ":scheme"                     , value: "https"      }, // 6
+  {name: ":status"                     , value: "200"        }, // 7
+  {name: ":status"                     , value: "500"        }, // 8
+  {name: ":status"                     , value: "404"        }, // 9
+  {name: ":status"                     , value: "403"        }, // 10
+  {name: ":status"                     , value: "400"        }, // 11
+  {name: ":status"                     , value: "401"        }, // 12
+  {name: "accept-charset"              , value: ""           }, // 13
+  {name: "accept-encoding"             , value: ""           }, // 14
+  {name: "accept-language"             , value: ""           }, // 15
+  {name: "accept-ranges"               , value: ""           }, // 16
+  {name: "accept"                      , value: ""           }, // 17
+  {name: "access-control-allow-origin" , value: ""           }, // 18
+  {name: "age"                         , value: ""           }, // 19
+  {name: "allow"                       , value: ""           }, // 20
+  {name: "authorization"               , value: ""           }, // 21
+  {name: "cache-control"               , value: ""           }, // 22
+  {name: "content-disposition"         , value: ""           }, // 23
+  {name: "content-encoding"            , value: ""           }, // 24
+  {name: "content-language"            , value: ""           }, // 25
+  {name: "content-length"              , value: ""           }, // 26
+  {name: "content-location"            , value: ""           }, // 27
+  {name: "content-range"               , value: ""           }, // 28
+  {name: "content-type"                , value: ""           }, // 29
+  {name: "cookie"                      , value: ""           }, // 30
+  {name: "date"                        , value: ""           }, // 31
+  {name: "etag"                        , value: ""           }, // 32
+  {name: "expect"                      , value: ""           }, // 33
+  {name: "expires"                     , value: ""           }, // 34
+  {name: "from"                        , value: ""           }, // 35
+  {name: "if-match"                    , value: ""           }, // 36
+  {name: "if-modified-since"           , value: ""           }, // 37
+  {name: "if-none-match"               , value: ""           }, // 38
+  {name: "if-range"                    , value: ""           }, // 39
+  {name: "if-unmodified-since"         , value: ""           }, // 40
+  {name: "last-modified"               , value: ""           }, // 41
+  {name: "link"                        , value: ""           }, // 42
+  {name: "location"                    , value: ""           }, // 43
+  {name: "max-forwards"                , value: ""           }, // 44
+  {name: "proxy-authenticate"          , value: ""           }, // 45
+  {name: "proxy-authorization"         , value: ""           }, // 46
+  {name: "range"                       , value: ""           }, // 47
+  {name: "referer"                     , value: ""           }, // 48
+  {name: "refresh"                     , value: ""           }, // 49
+  {name: "retry-after"                 , value: ""           }, // 50
+  {name: "server"                      , value: ""           }, // 51
+  {name: "set-cookie"                  , value: ""           }, // 52
+  {name: "strict-transport-security"   , value: ""           }, // 53
+  {name: "transfer-encoding"           , value: ""           }, // 54
+  {name: "user-agent"                  , value: ""           }, // 55
+  {name: "vary"                        , value: ""           }, // 56
+  {name: "via"                         , value: ""           }, // 57
+  {name: "www-authenticate"            , value: ""           }, // 58
 ];
 
 // This regexp matches a string exactly when the octets represented by
@@ -144,7 +145,7 @@ function stringsEqualConstantTime(str1, str2) {
 // reference set (3.1.3). This structure also keeps track of how many
 // times a header has been 'touched', which is useful for both
 // encoding and decoding.
-function HeaderTableEntry(name, value) {
+function HeaderTableEntry(name, value, isStatic) {
   this.name = name;
   this.value = value;
 }
@@ -235,10 +236,20 @@ HeaderTable.prototype.equals = function(other) {
 };
 
 HeaderTable.prototype.getEntry = function(index) {
-  if (!(index in this.entries_)) {
+  if (index < 0) {
     throw new Error('Invalid index ' + index);
   }
-  return this.entries_[index];
+  if (index < this.entries_.length) {
+    return this.entries_[index];
+  }
+  if (USE_STATIC_TABLE) {
+    var static_index = index - this.entries_.length;
+    if (static_index < STATIC_HEADER_TABLE.length) {
+      var static_entry = STATIC_HEADER_TABLE[static_index];
+      return new HeaderTableEntry(static_entry.name, static_entry.value);
+    }
+  }
+  throw new Error('Invalid index ' + index);
 };
 
 // Returns the index of the first header table entry with the given
@@ -254,6 +265,15 @@ HeaderTable.prototype.findIndexWithName = function(name) {
     if (stringsEqualConstantTime(entry.name, name)) {
       //console.log("found at idx: ", i);
       return i;
+    }
+  }
+  if (USE_STATIC_TABLE) {
+    for (var i = 0; i < STATIC_HEADER_TABLE.length; ++i) {
+      var entry = STATIC_HEADER_TABLE[i];
+      if (stringsEqualConstantTime(entry.name, name)) {
+        //console.log("found at idx: ", i);
+        return i + this.entries_.length;
+      }
     }
   }
   //console.log("Nothing found.");
@@ -278,6 +298,16 @@ HeaderTable.prototype.findIndexWithNameAndValue = function(name, value) {
         stringsEqualConstantTime(entry.value, value)) {
       //console.log("found at idx: ", i);
       return i;
+    }
+  }
+  if (USE_STATIC_TABLE) {
+    for (var i = 0; i < STATIC_HEADER_TABLE; ++i) {
+      var entry = STATIC_HEADER_TABLE[i];
+      if (stringsEqualConstantTime(entry.name, name) &&
+          stringsEqualConstantTime(entry.value, value)) {
+            //console.log("found at idx: ", i);
+            return i + this.entries_.length();
+          }
     }
   }
   //console.log("Nothing found.");

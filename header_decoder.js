@@ -15,20 +15,21 @@ Decoder.prototype.pushOntoCurrentOpcode = function(x) {
   this.currentOpcode_.push(x);
 }
 
+function octetsToHex(octets, use_spaces) {
+  var str = '';
+  for (var i = 0; i < octets.length; ++i) {
+    var octet = octets[i];
+    if (octet < 16) {
+      str += '0';
+    }
+    str += '' + octet.toString(16);
+    if (use_spaces) str += ' ';
+  }
+  return str;
+}
+
 function formatOpcode(opFields) {
   // format this: [ {fieldName: 'blah', otherKey: foo}, {fieldname...} ]
-  function octetsToHex(octets, use_spaces) {
-    var str = '';
-    for (var i = 0; i < octets.length; ++i) {
-      var octet = octets[i];
-      if (octet < 16) {
-        str += '0';
-      }
-      str += '' + octet.toString(16);
-      if (use_spaces) str += ' ';
-    }
-    return str;
-  }
   var output = '';
   for (var i = 0; i < opFields.length; ++i) {
     var field = opFields[i];
@@ -49,7 +50,7 @@ function formatOpcode(opFields) {
       output += key + ': ' + data;
       if (j + 1 < keys.length) output += ', ';
     }
-    output += '] ';
+    output += ']\n ';
   }
 
   return output;
@@ -199,8 +200,10 @@ Decoder.prototype.processNextHeaderRepresentation = function() {
   var opcodeStartIndex = this.i_;
   var opcode = determineOpcode(nextOctet);
 
+  this.pushOntoCurrentOpcode({fieldName: opcode.name,
+                              opcodeLengthInBits: opcode.opcode_len,
+                              discoveredFromPeekingAtByte: "'" + octetsToHex([nextOctet]) + "'"});
   // Touches are used below to track which headers have been emitted.
-  this.pushOntoCurrentOpcode({fieldName: opcode.name, opcodeLengthInBits: opcode.opcode_len, firstBytePeek: nextOctet});
   switch (opcode) {
     case OPCODES.INDEX_OPCODE:
       var index = this.decodeNextInteger_(7, "entry_index");
